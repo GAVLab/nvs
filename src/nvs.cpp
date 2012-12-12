@@ -43,43 +43,44 @@ bool NVS::Connect(std::string port, int baudrate) {
     try {
         serial_port_ = new serial::Serial(port, baudrate, timeout);
     }
-    catch (std::exception e) {
+    catch (exception e) {
         std::stringstream output;
-        output << "Failed create connection on port: " << port << "\nErr: " << e.what();
-        log_error_(output.str());
+        output << "\nFailed to create connection on port: " << port 
+            << "\nErr: " << e.what() << "\n";
+        cout << output.str();
         serial_port_ = NULL;
         is_connected_ = false;
         return false;
     }
 
     if (!serial_port_->isOpen()) {
-        std::stringstream output;
-        output << "Failed create open port: " << port;
-        log_error_(output.str());
+        stringstream output;
+        output << "\nFailed create open port: " << port;
+        cout << output.str();
         delete serial_port_;
         serial_port_ = NULL;
         is_connected_ = false;
         return false;
     } else {
-        std::stringstream output;
-        output << "Successfully opened port: " << port;
-        log_info_(output.str());
+        stringstream output;
+        output << "\nSuccessfully opened port: " << port;
+        cout << output.str();
     }
 
-    serial_port_->flush();
+        serial_port_->flush();
 
     if (!Ping()) {
-        std::stringstream output;
-        output << "NVS not found on port: " << port;
-        log_error_(output.str());
+        stringstream output;
+        output << "\nNVS not found on port: " << port << "\n";
+        cout << output.str();
         delete serial_port_;
         serial_port_ = NULL;
         is_connected_ = false;
         return false;
     } else {
         std::stringstream output;
-        output << "Successfully found NVS on port: " << port;
-        log_info_(output.str());
+        output << "\nSuccessfully found NVS on port: " << port;
+        cout << output.str();
     }
 
     is_connected_ = true;
@@ -101,8 +102,8 @@ void NVS::Disconnect() {
 bool NVS::Ping(int num_attempts) {
     try {
         while ((num_attempts--) > 0) {
-            log_info_("Searching for NVS receiver...");
-            // boost::this_thread::sleep(boos::posix_time::milliseconds(1000));
+            //log_info_("Searching for NVS receiver...");
+            boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 
             unsigned char result[MAX_NOUT_SIZE];
             size_t bytes_read;
@@ -110,9 +111,9 @@ bool NVS::Ping(int num_attempts) {
 
             if (bytes_read < 8) {
                 stringstream output;
-                output << "Only read " << bytes_read
+                output << "\nOnly read " << bytes_read
                         << " bytes in response to ping.";
-                log_warning_(output.str());
+                cout << output.str();
                 continue;
             }
 
@@ -122,24 +123,24 @@ bool NVS::Ping(int num_attempts) {
         }
     } catch (exception &e) {
         stringstream output;
-        output << "Error pinging receiver: " << e.what();
-        log_error_(output.str());
+        output << "\nError pinging receiver: " << e.what();
+        cout << output.str();
         return false;
     }
     return false;
 }
 
-void NVS::StartReading() {
+/*void NVS::StartReading() {
     reading_status_ = true;
     read_thread_ptr_ = boost::shared_ptr<boost::thread>(
         new boost::thread(boost::bind(&NVS::ReadSerialPort, this)));
 }
-
+*/
 void NVS::StopReading() {
     reading_status_ = false;
 }
 
-void NVS::ReadSerialPort() {
+/*void NVS::ReadSerialPort() {
     uint8_t buffer[MAX_NOUT_SIZE];
     size_t len;
 
@@ -149,8 +150,8 @@ void NVS::ReadSerialPort() {
             len = serial_port_->read(buffer, MAX_NOUT_SIZE);
         } catch (exception &e) {
             stringstream output;
-            output << "Error reading serial port: " << e.what();
-            log_error_(output.str());
+            output << "\nError reading serial port: " << e.what();
+            //log_error_(output.str());
             Disconnect();
             return;
         }
@@ -159,4 +160,5 @@ void NVS::ReadSerialPort() {
         // add data to the buffer to be parsed
         // BufferIncomingData(buffer, len);
     }
-}
+    return;
+}*/

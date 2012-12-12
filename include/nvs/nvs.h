@@ -14,7 +14,6 @@
 #define PI 3.14159265
 
 typedef boost::function<double()> GetTimeCallback;
-typedef boost::function<void(const std::string&)> LogMsgCallback;
 
 class NVS {
 public:
@@ -26,12 +25,6 @@ public:
 
     bool IsConnected() {return is_connected_;}
     bool Ping(int num_attempts=5);
-
-    /* Diagnostic Callbacks */
-    LogMsgCallback log_debug_;
-    LogMsgCallback log_info_;
-    LogMsgCallback log_warning_;
-    LogMsgCallback log_error_;
 
 
 private:
