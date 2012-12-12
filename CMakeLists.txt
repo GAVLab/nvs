@@ -13,13 +13,13 @@ set(LIBRARY_OUTPUT_PATH     ${PROJECT_SOURCE_DIR}/lib)
 
 set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Built type for cmake")
 
+# serial package
+
 if(NOT DEFINED serial_LIBRARIES OR NOT DEFINED serial_INCLUDE_DIRS)
     find_package(serial REQUIRED)
 else (NOT DEFINED serial_LIBRARIES OR NOT DEFINED serial_INCLUDE_DIRS)
     set(serial_FOUND TRUE)
 endif(NOT DEFINED serial_LIBRARIES OR NOT DEFINED serial_INCLUDE_DIRS)
-
-# serial package
 
 if(serial_FOUND)
     include_directories(${serial_INCLUDE_DIRS})
@@ -37,7 +37,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # set headers and sources
 
-set(NVS_SRCS src/nvs.cpp)
+set(NVS_SRCS src/nvs.cpp src/main.cpp)
 set(NVS_HEADERS include/nvs/nvs.h
                 include/nvs/nvs_structures.h)
 
@@ -52,7 +52,9 @@ list(APPEND NVS_LINK_LIBS   ${Boost_SYSTEM_LIBRARY}
 # compile the library
 
 add_library(nvs ${NVS_SRCS} ${NVS_HEADERS})
-#add_executable(run_nvs src/main.cpp)
+target_link_libraries(nvs ${NVS_LINK_LIBS})
+add_executable(run_nvs src/main.cpp)
+target_link_libraries(run_nvs nvs)
 
 ## Setup install and uninstall
 

@@ -1,10 +1,9 @@
-// #include "nvs/nvs.h"
-#include <stdio.h>
-#include <iostream.h>
+#include "nvs/nvs.h"
+#include <iostream>
 
 using namespace std;
 
 int main () {
-    cout << "Main\n";
+    NVS *nvs_ = new NVS;
     return 0;
 }
