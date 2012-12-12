@@ -6,8 +6,8 @@
 
 namespace nvs {
 
-// #include "nvs_structures.h"
-#include <fstream>
+#include "nvs_structures.h"
+// #include <fstream>
 // #include <serial/serial.h> 
 
 class NVS {
