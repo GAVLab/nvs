@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.4.6)
+project(nvs)
 
 # Set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
@@ -43,22 +44,25 @@ find_package(Boost COMPONENTS thread system REQUIRED)
 link_directories(${Boost_LIBRARY_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 
-#list(APPEND NVS_LINK_LIBS ${Boost_SYSTEM_LIBRARY}
-#                           ${Boost_THREAD_LIBRARY})
+list(APPEND NVS_LINK_LIBS ${Boost_SYSTEM_LIBRARY}
+                           ${Boost_THREAD_LIBRARY})
 
 
 # compile the library
 add_library(nvs ${NVS_SRCS} ${NVS_HEADERS})
 
+add_executable(run_nvs src/main.cpp)
+
 #SET(CMAKE_INSTALL_PREFIX /usr/local)
 
-#INSTALL(TARGETS nvs
-#    RUNTIME DESTINATION bin
-#    LIBRARY DESTINATION lib
-#    ARCHIVE DESTINATION lib
-#)
+INSTALL(TARGETS nvs
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+)
 
-#INSTALL(FILES include/nvs/nvs.h include/nvs/nvs_structures.h
-#          DESTINATION include/nvs)
+INSTALL(FILES include/nvs/nvs.h include/nvs/nvs_structures.h
+        DESTINATION include/nvs)
 
-#INSTALL(FILES Findnvs.cmake DESTINATION ${CMAKE_FIND_INSTALL_PATH}/Modules/)
+INSTALL(FILES Findnvs.cmake
+        DESTINATION ${CMAKE_FIND_INSTALL_PATH}/Modules/)
