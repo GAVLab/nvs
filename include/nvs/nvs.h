@@ -3,19 +3,20 @@
 */
 #ifndef NVS_H
 #define NVS_H
-
-namespace nvs {
+//using namespace std;
+//namespace nvs {
 
 #include "nvs_structures.h"
-// #include <fstream>
+#include <fstream>
 // #include <serial/serial.h> 
 
 class NVS {
+  //  using namespace std;
 public:
     NVS();
     ~NVS();
 
-    // bool Connect(std::string port, int baudrate=115200);
+     bool Connect(std::string port, int baudrate=115200);
     void Disconnect();
 
     bool IsConnected() {return is_connected_;}
@@ -30,6 +31,6 @@ private:
     bool is_connected_;
 };
 
-} // end namespace
+//} // end namespace
 
 #endif 

@@ -6,3 +6,10 @@
 
 using namespace std;
 // using namespace nvs;
+
+int main ()
+{
+
+cout<<"NVS TEST!\n";
+return 0;
+}

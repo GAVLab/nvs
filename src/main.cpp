@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <iostream.h>
 
+using namespace std;
+
 int main () {
-    std::cout << "Main\n";
+    cout << "Main\n";
     return 0;
 }
