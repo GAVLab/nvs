@@ -15,6 +15,7 @@ int main (int argc, char *argv[]) {
             port = argv[1];
     }
     receiver->Connect(port, baudrate);
+    // boost::thread* rThread = new boost::thread(boost::bind(&NVS::ReadSerialPort, receiver));
 
     return 0;
 }

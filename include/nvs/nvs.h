@@ -16,6 +16,7 @@
 typedef boost::function<double()> GetTimeCallback;
 
 class NVS {
+/* Public Functions */
 public:
     NVS();
     ~NVS();
@@ -26,22 +27,24 @@ public:
     bool IsConnected() {return is_connected_;}
     bool Ping(int num_attempts=5);
 
-
+/* Private Functions */
 private:
     /* Reading */
     void StartReading();
-    void StopReading();
     void ReadSerialPort();
+    void StopReading();    
     void BufferIncomingData(uint8_t* msg, size_t len);
 
+    /* Talk to the receiver */
     bool SendMessage(std::string msg, size_t len);
 
-
+/* Private Attributes */
+private:
     GetTimeCallback time_handler_;
 
     /*Serial Port Parameters*/
-    serial::Serial *serial_port_;
-    boost::shared_ptr<boost::thread> read_thread_ptr_;
+    serial::Serial* serial_port_;
+    boost::shared_ptr<boost::thread> read_thread_;
     bool reading_status_;
     bool is_connected_;
 
