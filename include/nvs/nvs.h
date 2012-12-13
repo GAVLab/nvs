@@ -28,10 +28,14 @@ public:
 
 
 private:
+    /* Reading */
     void StartReading();
     void StopReading();
     void ReadSerialPort();
-    void BufferIncomingData(uint8_t* msg, size_t length);
+    void BufferIncomingData(uint8_t* msg, size_t len);
+
+    bool SendMessage(uint8_t *msg, size_t len);
+    
 
     GetTimeCallback time_handler_;
 
@@ -47,10 +51,10 @@ private:
     size_t bytes_remaining_;    //!< bytes remaining to be read in the current message
     size_t buffer_index_;       //!< index into data_buffer_
     size_t header_length_;  //!< length of the current header being read
-    bool reading_acknowledgement_;  //!< true if an acknowledgement is being received
+    bool reading_acknowledgment_;  //!< true if an acknowledgement is being received
     double read_timestamp_;         //!< time stamp when last serial port read completed
     double parse_timestamp_;        //!< time stamp when last parse began
-    unsigned short msgID;
+    unsigned short msgID_;
       
 };
 
