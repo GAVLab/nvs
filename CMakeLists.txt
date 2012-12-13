@@ -53,25 +53,8 @@ list(APPEND NVS_LINK_LIBS   ${Boost_SYSTEM_LIBRARY}
 
 add_library(nvs ${NVS_SRCS} ${NVS_HEADERS})
 target_link_libraries(nvs ${NVS_LINK_LIBS})
+
+# make run file
+
 add_executable(run_nvs src/main.cpp)
 target_link_libraries(run_nvs nvs)
-
-## Setup install and uninstall
-
-#SET(CMAKE_INSTALL_PREFIX /usr/local)
-
-#INSTALL(TARGETS nvs
-#        RUNTIME DESTINATION bin
-#        LIBRARY DESTINATION lib
-#        ARCHIVE DESTINATION lib
-#)
-
-#INSTALL(FILES include/nvs/nvs.h include/nvs/nvs_structures.h
-#        DESTINATION include/nvs)
-
-#IF(NOT CMAKE_FIND_INSTALL_PATH)
-#      set(CMAKE_FIND_INSTALL_PATH ${CMAKE_ROOT})
-#ENDIF(NOT CMAKE_FIND_INSTALL_PATH)
-
-#INSTALL(FILES Findnvs.cmake
-#        DESTINATION ${CMAKE_FIND_INSTALL_PATH}/Modules/)

@@ -34,8 +34,8 @@ private:
     void ReadSerialPort();
     void BufferIncomingData(uint8_t* msg, size_t len);
 
-    bool SendMessage(uint8_t *msg, size_t len);
-    
+    bool SendMessage(std::string msg, size_t len);
+
 
     GetTimeCallback time_handler_;
 

@@ -109,18 +109,10 @@ bool NVS::Ping(int num_attempts) {
             unsigned char result[MAX_NOUT_SIZE];
             size_t bytes_read;
 
-            // version message - ALVER
-            uint8_t message[18] = {0x24, 
-                                   0x47, 0x50, 
-                                   0x47, 0x50, 
-                                   0x51, 0x2c, 
-                                   0x41, 0x4c, 0x56, 0x45, 0x52, 
-                                   0x2A, 0x33, 0x31, 
-                                   0x0D, 0x0A};
+            string message = "$GPGPQ,ALVER*31<CR><LF>";
+            bool version_sent = SendMessage(message, message.size());
 
-            bool version_sent = SendMessage(message, sizeof(message));
-
-            bytes_read = serial_port_->read(result, MAX_NOUT_SIZE+5000);
+            bytes_read = serial_port_->read(result, MAX_NOUT_SIZE);
 
             if (bytes_read < 8) {
                 cout << "\nOnly read " << bytes_read << " bytes in response to ping";
@@ -132,51 +124,6 @@ bool NVS::Ping(int num_attempts) {
             cout << "\nPing result: " << result_;
 
             return true;
-
-
-            /*From ubx code directly*/
-/*            uint16_t length;
-            // search through result for version message
-            for (int ii = 0; ii < (bytes_read - 8); ii++) {
-                //std::cout << hex << (unsigned int)result[ii] << std::endl;
-                if (result[ii] == 0xB5) {
-                    if (result[ii + 1] != 0x62)
-                        continue;
-                    if (result[ii + 2] != 0x0A)
-                        continue;
-                    if (result[ii + 3] != 0x04)
-                        continue;
-                    //std::cout << "length1:" << hex << (unsigned int)result[ii+4] << std::endl;
-                    //std::cout << "length2:" << hex << (unsigned int)result[ii+5] << std::endl;
-                    length = (result[ii + 4]) + (result[ii + 5] << 8);
-                    if (length < 40) {
-                        cout << "Incomplete version message received";
-                        //    //return false;
-                        continue;
-                    }
-
-                    string sw_version;
-                    string hw_version;
-                    string rom_version;
-                    sw_version.append((char*) (result + 6));
-                    hw_version.append((char*) (result + 36));
-                    //rom_version.append((char*)(result+46));
-                    cout << "Ublox receiver found.";
-                    cout << "Software Version: " << sw_version;
-                    cout << "Hardware Version: " << hw_version;
-                    //log_info_("ROM Version: " + rom_version);
-                    return true;
-                }
-            }
-            stringstream output;
-            output << "Read " << bytes_read
-                    << " bytes, but version message not found.";
-            cout << output.str();
-*/
-
-
-
-
         }
     } catch (exception &e) {
         stringstream output;
@@ -225,12 +172,11 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t len) {
             buffer_index_ = 0;
             cout << "\nReciever buffer overflow!";
         }
-
     }
 }
 
-bool NVS::SendMessage(uint8_t *msg, size_t len) {
-    size_t bytes_written = serial_port_->write(msg, len);
+bool NVS::SendMessage(string msg, size_t len) {
+    size_t bytes_written = serial_port_->write(msg);
     if (bytes_written == len)
         return true;
     else {
