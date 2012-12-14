@@ -2,15 +2,9 @@
     Author: Robert Cofield, for GAVLab
 */
 #include <nvs/nvs.h>
-#include <iostream>
 
 using namespace std;
 
-/*
-    Default callback method for time stamping data.  Used if a
-    user callback is not set.  Returns the current time from the
-    CPU clock as the number of seconds from Jan 1, 1970
- */
 double DefaultGetTime() {
     boost::posix_time::ptime present_time(
             boost::posix_time::microsec_clock::universal_time());
@@ -28,14 +22,14 @@ NVS::NVS() {
     is_connected_ = false;
 
     /* Reading */
-    buffer_index_ = 0;
-    reading_acknowledgment_ = false;
-    bytes_remaining_ = false;
-    header_length_ = 0;
-    msgID_ = 0;
-    data_read_ = NULL;
-    read_timestamp_ = 0;
-    parse_timestamp_ = 0;
+    // buffer_index_ = 0;
+    // reading_acknowledgment_ = false;
+    // bytes_remaining_ = false;
+    // header_length_ = 0;
+    // msgID_ = 0;
+    // data_read_ = NULL;
+    // read_timestamp_ = 0;
+    // parse_timestamp_ = 0;
 
     /* Data Callbacks */
 
@@ -45,13 +39,16 @@ NVS::~NVS() {
     Disconnect();
 }
 
-bool NVS::Connect(std::string port, int baudrate) {
-    serial::Timeout timeout(100, 1000, 0, 1000, 0);
+bool NVS::Connect(string port, int baudrate) {
+    serial::Timeout timeout_ = serial::Timeout(serial_inter_byte_timeout_,
+                                               serial_read_timeout_constant_,
+                                               serial_read_timeout_multiplier_,
+                                               serial_write_timeout_constant_,
+                                               serial_write_timeout_multiplier_);
     try {
-        serial_port_ = new serial::Serial(port, baudrate, timeout);
+        serial_port_ = new serial::Serial(port, baudrate, timeout_);
     }
     catch (exception e) {
-        std::stringstream output;
         cout << "Failed to create connection on port: " << port 
             << "\nErr: " << e.what() << "\n";
         serial_port_ = NULL;
@@ -60,33 +57,32 @@ bool NVS::Connect(std::string port, int baudrate) {
     }
 
     if (!serial_port_->isOpen()) {
-        stringstream output;
         cout << "Failed create open port: " << port << "\n";
         delete serial_port_;
         serial_port_ = NULL;
         is_connected_ = false;
         return false;
     } else {
-        stringstream output;
         cout << "Successfully opened port: " << port << "\n";
     }
 
-        serial_port_->flush();
+    serial_port_->flush();
 
     if (!Ping()) {
-        stringstream output;
         cout << "NVS not found on port: " << port << "\n";
         delete serial_port_;
         serial_port_ = NULL;
         is_connected_ = false;
         return false;
     } else {
-        std::stringstream output;
-        cout << "\nSuccessfully found NVS on port: " << port << "\n";
+        cout << "Successfully found NVS\n";
+        is_connected_ = true;
     }
 
-    is_connected_ = true;
     StartReading();
+    StartParsing();
+    cout << GetVersion();
+
     return true;
 }
 
@@ -106,14 +102,106 @@ bool NVS::Ping(int num_attempts) {
         while ((num_attempts--) > 0) {
             boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 
-            unsigned char result[MAX_NOUT_SIZE];
+            unsigned char result[5000];
             size_t bytes_read;
+            bytes_read = serial_port_->read(result, 5000);
 
-            string message = "$GPGPQ,ALVER*31<CR><LF>";
-            bool version_sent = SendMessage(message, message.size());
-            bytes_read = serial_port_->read(result, MAX_NOUT_SIZE);
-/*
-            // Find response
+            if (bytes_read < 8) {
+                cout << "Only read " << bytes_read << " bytes in response to ping\n";
+                continue;
+            }
+
+            string result_;
+            result_.append((char*) result);
+            // cout << "Ping result: " << result_ << "\n";
+
+            return true;
+        }
+    } catch (exception &e) {
+        cout << "\nError pinging receiver: " << e.what() << "\n";
+        return false;
+    }
+}
+
+void NVS::StartReading() {
+    reading_status_ = true;
+    read_thread_ = boost::shared_ptr<boost::thread>(
+        new boost::thread(boost::bind(&NVS::ReadSerialPort, this)) );
+    // read_thread_->join();
+    cout << "Started Reading thread\n";
+}
+
+void NVS::StopReading() {
+    reading_status_ = false;
+}
+
+void NVS::StartParsing() {
+
+}
+
+void NVS::StopParsing() {
+
+}
+
+void NVS::ReadSerialPort() {
+    vector<string> new_data;
+    size_t len;
+    cout << "\tReading Serial Port\n";
+    // continuously read data from serial port
+    while (reading_status_) {
+        try{
+            // len = serial_port_->read(buffer, max_buffer_size_);
+            new_data = serial_port_->readlines();
+        } catch (exception &e) {
+            cout << "Error reading serial port: " << e.what() << "\n";
+            Disconnect();
+            return;
+        }
+        // TODO pass if empty
+        // Timestamp the read
+        read_timestamp_ = time_handler_();
+        // add data to the buffer to be parsed
+        len = new_data.size();
+        BufferIncomingData(new_data, len);
+    }
+}
+
+void NVS::BufferIncomingData(vector<string> msgs, size_t len) {
+    cout << "\tBufferIncomingData\n";
+    // Check for overflow
+    bool too_many = false;
+    if ((data_buffer_.size() + len) > max_buffer_size_) {
+        too_many = true;
+        cout << "buffer overflow! skipping messages\n";
+    }
+
+    for (vector<string>::const_iterator it = msgs.begin();
+                                        it != msgs.end(); it++) {
+        cout << "\t" << *it;
+
+        if ( (it->at( 0 ) != '$') | (it->at(it->length() - 5) != '*') ) {
+            cout << "Received bad sentence\n";
+            continue;
+        }
+
+    }
+}
+
+bool NVS::SendMessage(string msg, size_t len) {
+    size_t bytes_written = serial_port_->write(msg);
+    if (bytes_written == len)
+        return true;
+    else {
+        cout << "Full message was not sent over serial port\n";
+        return false;
+    }
+}
+
+string NVS::GetVersion() {
+    string message = "$GPGPQ,ALVER*31<CR><LF>";
+    bool sent = SendMessage(message, message.size());
+
+/*            // Find response
             bool found_version = false;
             string line;
             uint search = 0;
@@ -130,77 +218,11 @@ bool NVS::Ping(int num_attempts) {
                     break;
                 }
             }
-            cout << "\n" << line;
-*/
-            if (bytes_read < 8) {
-                cout << "Only read " << bytes_read << " bytes in response to ping\n";
-                continue;
-            }
+            cout << "\n" << line;*/
 
-            string result_;
-            result_.append((char*) result);
-            cout << "Ping result: " << result_ << "\n";
-            string model;
-            string version;
-
-            return true;
-        }
-    } catch (exception &e) {
-        stringstream output;
-        cout << "\nError pinging receiver: " << e.what() << "\n";
-        return false;
-    }
-    return false;
+    return "version:\n";
 }
 
-void NVS::StartReading() {
-    reading_status_ = true;
-    read_thread_ = boost::shared_ptr<boost::thread>(
-        new boost::thread(boost::bind(&NVS::ReadSerialPort, this)) );
-    read_thread_->join();
-    cout << "Started Reading thread\n";
-}
+void NVS::ParseData() {
 
-void NVS::StopReading() {
-    reading_status_ = false;
-}
-
-void NVS::ReadSerialPort() {
-    uint8_t buffer[MAX_NOUT_SIZE];
-    size_t len;
-    cout << "Reading Serial Port\n";
-    // continuously read data from serial port
-    while (reading_status_) {
-        try{
-            len = serial_port_->read(buffer, MAX_NOUT_SIZE);
-        } catch (exception &e) {
-            stringstream output;
-            cout << "Error reading serial port: " << e.what() << "\n";
-            Disconnect();
-            return;
-        }
-        // Timestamp the read
-        read_timestamp_ = time_handler_();
-        // add data to the buffer to be parsed
-        BufferIncomingData(buffer, len);
-    }
-}
-
-void NVS::BufferIncomingData(uint8_t *msg, size_t len) {
-    for (uint i = 0; i < len; i++) {
-        if (buffer_index_ > MAX_NOUT_SIZE) {
-            buffer_index_ = 0;
-            cout << "\nReciever buffer overflow!\n";
-        }
-    }
-}
-
-bool NVS::SendMessage(string msg, size_t len) {
-    size_t bytes_written = serial_port_->write(msg);
-    if (bytes_written == len)
-        return true;
-    else {
-        cout << "Full message was not sent over serial port\n";
-        return false;
-    }
 }

@@ -15,7 +15,10 @@ int main (int argc, char *argv[]) {
             port = argv[1];
     }
     receiver->Connect(port, baudrate);
-    // boost::thread* rThread = new boost::thread(boost::bind(&NVS::ReadSerialPort, receiver));
+
+    // Because action is done in created threads, need to keep this one alive
+    while (1)
+        boost::this_thread::sleep(boost::posix_time::milliseconds(1));
 
     return 0;
 }
