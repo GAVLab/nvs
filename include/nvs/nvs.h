@@ -15,6 +15,7 @@
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread/pthread/condition_variable_fwd.hpp>
+#include <boost/algorithm/string.hpp>
 
 // #include <boost/thread/thread.hpp>
 // #include <boost/thread/locks.hpp>
@@ -31,6 +32,7 @@ double DefaultGetTime();
 
 // Sleep for specified milliseconds
 void sleep_msecs(unsigned int msecs);
+
 
 class NVS {
 public:
@@ -54,14 +56,18 @@ private:
     void BufferIncomingData(std::vector<std::string> msgs, size_t len);
     void DelegateParsing();
 
-
     bool SendMessage(std::string msg, size_t len);
 
 
     /*
         Parse Specific Messages
     */
+    /* NMEA Standard Messages */
     void ParseGGA(std::string talker_id, std::string payload);
+    void ParseGSV(std::string talker_id, std::string payload);
+    void ParseGSA(std::string talker_id, std::string payload);
+    /* Proprietary Messages */
+    void ParsePORZD(std::string payload);
 
 /*
     Private Attributes
@@ -93,17 +99,16 @@ private:
     bool reading_status_;
     // Maximum size of an NVS log buffer
     std::queue<std::string> data_buffer_;
-    // unsigned char data_buffer_[5000];  //!< data currently being buffered to read
-    // unsigned char* data_read_;      //!< used only in BufferIncomingData - declared here for speed
-    // size_t bytes_remaining_;    //!< bytes remaining to be read in the current message
-    // size_t buffer_index_;       //!< index into data_buffer_
-    // size_t header_length_;  //!< length of the current header being read
-    // bool reading_acknowledgment_;  //!< true if an acknowledgement is being received
     double read_timestamp_;         //!< time stamp when last serial port read completed
     // double parse_timestamp_;        //!< time stamp when last parse began
     // unsigned short msgID_;
   
-
+/*
+    Public Data from reciever in usable format
+*/
+public:
+    float rmsError; // PORZD - planar
+    bool dataIsValid; // PORZD
 
 };
 
