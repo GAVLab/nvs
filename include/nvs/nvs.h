@@ -6,12 +6,18 @@
 
 #include <fstream>
 #include <iostream>
+#include <queue>
 
 #include "nvs_structures.h"
 #include <serial/serial.h> 
 
 #include <boost/function.hpp>
 #include <boost/thread.hpp>
+#include <boost/bind.hpp>
+#include <boost/thread/pthread/condition_variable_fwd.hpp>
+
+// #include <boost/thread/thread.hpp>
+// #include <boost/thread/locks.hpp>
 
 #define PI 3.14159265
 
@@ -22,6 +28,9 @@
 // user callback is not set.  Returns the current time from the
 // CPU clock as the number of seconds from Jan 1, 1970 
 double DefaultGetTime();
+
+// Sleep for specified milliseconds
+void sleep_msecs(unsigned int msecs);
 
 class NVS {
 public:
@@ -39,21 +48,20 @@ public:
     Private Functions
 */
 private:
-    /*
-        Serial Read/Write
-    */
     void StartReading();
-    void ReadSerialPort();
     void StopReading();    
+    void ReadSerialPort();
     void BufferIncomingData(std::vector<std::string> msgs, size_t len);
+    void DelegateParsing();
+
+
     bool SendMessage(std::string msg, size_t len);
 
+
     /*
-        Parsing
+        Parse Specific Messages
     */
-    void StartParsing();
-    void ParseData();
-    void StopParsing();
+    void ParseGGA(std::string talker_id, std::string payload);
 
 /*
     Private Attributes
@@ -75,8 +83,6 @@ private:
     // A multiplier against the number of requested bytes to wait after calling write.
     const static uint32_t serial_write_timeout_multiplier_ = 0;
     serial::Serial* serial_port_;
-    boost::shared_ptr<boost::thread> read_thread_;
-    bool reading_status_;
     bool is_connected_;
 
     const static uint max_buffer_size_ = 5000;  
@@ -84,8 +90,9 @@ private:
     /* 
         Incoming data buffers
     */
+    bool reading_status_;
     // Maximum size of an NVS log buffer
-    std::vector<std::string> data_buffer_;
+    std::queue<std::string> data_buffer_;
     // unsigned char data_buffer_[5000];  //!< data currently being buffered to read
     // unsigned char* data_read_;      //!< used only in BufferIncomingData - declared here for speed
     // size_t bytes_remaining_;    //!< bytes remaining to be read in the current message
@@ -95,7 +102,9 @@ private:
     double read_timestamp_;         //!< time stamp when last serial port read completed
     // double parse_timestamp_;        //!< time stamp when last parse began
     // unsigned short msgID_;
-      
+  
+
+
 };
 
 #endif 

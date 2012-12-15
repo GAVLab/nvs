@@ -5,6 +5,9 @@
 
 using namespace std;
 
+/*
+    Utility Methods
+*/
 double DefaultGetTime() {
     boost::posix_time::ptime present_time(
             boost::posix_time::microsec_clock::universal_time());
@@ -12,6 +15,11 @@ double DefaultGetTime() {
     return duration.total_seconds();
 }
 
+void sleep_msecs(unsigned int msecs) {
+    boost::this_thread::sleep(boost::posix_time::milliseconds(msecs));
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 NVS::NVS() {
     time_handler_ = DefaultGetTime;
@@ -22,6 +30,7 @@ NVS::NVS() {
     is_connected_ = false;
 
     /* Reading */
+    data_buffer_ = queue<string>();
     // buffer_index_ = 0;
     // reading_acknowledgment_ = false;
     // bytes_remaining_ = false;
@@ -80,8 +89,6 @@ bool NVS::Connect(string port, int baudrate) {
     }
 
     StartReading();
-    StartParsing();
-    cout << GetVersion();
 
     return true;
 }
@@ -100,7 +107,7 @@ void NVS::Disconnect() {
 bool NVS::Ping(int num_attempts) {
     try {
         while ((num_attempts--) > 0) {
-            boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+            sleep_msecs(1000);
 
             unsigned char result[5000];
             size_t bytes_read;
@@ -125,28 +132,23 @@ bool NVS::Ping(int num_attempts) {
 
 void NVS::StartReading() {
     reading_status_ = true;
-    read_thread_ = boost::shared_ptr<boost::thread>(
-        new boost::thread(boost::bind(&NVS::ReadSerialPort, this)) );
-    // read_thread_->join();
-    cout << "Started Reading thread\n";
+    cout << "Start Reading\n";
+
+    // put settings/requests here
+
+    ReadSerialPort();    
 }
 
 void NVS::StopReading() {
     reading_status_ = false;
 }
 
-void NVS::StartParsing() {
 
-}
-
-void NVS::StopParsing() {
-
-}
 
 void NVS::ReadSerialPort() {
     vector<string> new_data;
     size_t len;
-    cout << "\tReading Serial Port\n";
+    cout << "Reading Serial Port\n";
     // continuously read data from serial port
     while (reading_status_) {
         try{
@@ -158,8 +160,10 @@ void NVS::ReadSerialPort() {
             return;
         }
         // TODO pass if empty
+
         // Timestamp the read
         read_timestamp_ = time_handler_();
+        cout << "Time: " << read_timestamp_;
         // add data to the buffer to be parsed
         len = new_data.size();
         BufferIncomingData(new_data, len);
@@ -167,7 +171,7 @@ void NVS::ReadSerialPort() {
 }
 
 void NVS::BufferIncomingData(vector<string> msgs, size_t len) {
-    cout << "\tBufferIncomingData\n";
+    cout << "\n";
     // Check for overflow
     bool too_many = false;
     if ((data_buffer_.size() + len) > max_buffer_size_) {
@@ -177,14 +181,44 @@ void NVS::BufferIncomingData(vector<string> msgs, size_t len) {
 
     for (vector<string>::const_iterator it = msgs.begin();
                                         it != msgs.end(); it++) {
-        cout << "\t" << *it;
+        // cout << "\t" << *it;
 
-        if ( (it->at( 0 ) != '$') | (it->at(it->length() - 5) != '*') ) {
+        // TODO compare checksums
+
+        uint end_pos = it->size() - 5;
+        if ( (it->at( 0 ) != '$') | (it->at(end_pos) != '*') ) {
             cout << "Received bad sentence\n";
             continue;
         }
 
+        data_buffer_.push( it->substr(1, end_pos - 1) );
+        cout << "Payload: " << data_buffer_.back() << "\n";
     }
+
+    DelegateParsing();
+}
+
+void NVS::DelegateParsing() {
+    cout << "Parsing Data\n";
+    string msg;
+    string talker_id;
+    string message_id;
+    string payload;
+
+    if (data_buffer_.empty()) {
+        cout << "No data in buffer\n";
+        return;
+    }
+
+    msg.assign( data_buffer_.front() );
+    data_buffer_.pop();
+    talker_id.assign( msg.substr(0,2) );
+    message_id.assign( msg.substr(2,3) );
+    // cout << "Message ID: " << message_id << "\n";
+    payload.assign( msg.substr(5, msg.size()) );
+
+    if (strcmp( message_id.c_str(), "GGA" ))
+        ParseGGA(talker_id, payload);
 }
 
 bool NVS::SendMessage(string msg, size_t len) {
@@ -201,28 +235,13 @@ string NVS::GetVersion() {
     string message = "$GPGPQ,ALVER*31<CR><LF>";
     bool sent = SendMessage(message, message.size());
 
-/*            // Find response
-            bool found_version = false;
-            string line;
-            uint search = 0;
-            while (!found_version) {
-                bool version_sent = SendMessage(message, message.size());
-                line = serial_port_->readline();
-                cout << "\n" << line;
-                if (string::npos != line.find("ALVER")) {
-                    found_version = true;
-                }
-                search++;
-                if (search > 50) {
-                    cout << "\ncould not find version information";
-                    break;
-                }
-            }
-            cout << "\n" << line;*/
-
     return "version:\n";
 }
 
-void NVS::ParseData() {
-
+/*
+    Parsing Functions
+*/
+void NVS::ParseGGA(string talker_id, string payload) {
+    cout << "Parsing GGA\n";
+    
 }

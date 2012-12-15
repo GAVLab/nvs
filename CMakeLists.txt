@@ -37,7 +37,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # set headers and sources
 
-set(NVS_SRCS src/nvs.cpp src/main.cpp)
+set(NVS_SRCS src/nvs.cpp src/main.cc) # may need to take the main out of here?
 set(NVS_HEADERS include/nvs/nvs.h
                 include/nvs/nvs_structures.h)
 
@@ -56,5 +56,5 @@ target_link_libraries(nvs ${NVS_LINK_LIBS})
 
 # make run file
 
-add_executable(run_nvs src/main.cpp)
+add_executable(run_nvs src/main.cc)
 target_link_libraries(run_nvs nvs)
