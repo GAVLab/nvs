@@ -18,7 +18,7 @@ int main (int argc, char *argv[]) {
 
     // Because action is done in other threads, need to keep this one alive
     while (1)
-        boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+        sleep_msecs(1000);
 
     return 0;
 }

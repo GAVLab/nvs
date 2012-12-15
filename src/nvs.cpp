@@ -172,17 +172,18 @@ void NVS::ReadSerialPort() {
 
 void NVS::BufferIncomingData(vector<string> msgs, size_t len) {
     cout << "\n";
-    // Check for overflow
-    bool too_many = false;
-    if ((data_buffer_.size() + len) > max_buffer_size_) {
-        too_many = true;
-        cout << "buffer overflow! skipping messages\n";
-    }
+    //  TODO Check for overflow
+    // bool too_many = false;
+    // if ((data_buffer_.size() + len) > max_buffer_size_) {
+    //     too_many = true;
+    //     cout << "buffer overflow! skipping messages\n";
+    // }
 
     for (vector<string>::const_iterator it = msgs.begin();
                                         it != msgs.end(); it++) {
         // cout << "\t" << *it;
 
+        // TODO stop if buffer full
         // TODO compare checksums
 
         uint end_pos = it->size() - 5;
@@ -199,27 +200,36 @@ void NVS::BufferIncomingData(vector<string> msgs, size_t len) {
 }
 
 void NVS::DelegateParsing() {
-    cout << "Parsing Data\n";
+    cout << "Delegate Parsing Data\n";
     string msg;
     string talker_id;
     string message_id;
     string payload;
 
-    if (data_buffer_.empty()) {
-        cout << "No data in buffer\n";
-        return;
+    while (!data_buffer_.empty()) {
+        msg.assign( data_buffer_.front() );
+        data_buffer_.pop();
+        talker_id.assign( msg.substr(0,2) );
+        message_id.assign( msg.substr(2,3) );
+        cout << "Message ID: " << message_id << "\n";
+        payload.assign( msg.substr(5, msg.size()) );
+
+        if (message_id == "GGA")
+            ParseGGA(talker_id, payload);
     }
-
-    msg.assign( data_buffer_.front() );
-    data_buffer_.pop();
-    talker_id.assign( msg.substr(0,2) );
-    message_id.assign( msg.substr(2,3) );
-    // cout << "Message ID: " << message_id << "\n";
-    payload.assign( msg.substr(5, msg.size()) );
-
-    if (strcmp( message_id.c_str(), "GGA" ))
-        ParseGGA(talker_id, payload);
 }
+
+/*
+    Parsing Functions for Specific Messages
+*/
+
+void NVS::ParseGGA(string talker_id, string payload) {
+    cout << "Parsing GGA\n";   
+}
+
+/*
+    Send Functions
+*/
 
 bool NVS::SendMessage(string msg, size_t len) {
     size_t bytes_written = serial_port_->write(msg);
@@ -236,12 +246,4 @@ string NVS::GetVersion() {
     bool sent = SendMessage(message, message.size());
 
     return "version:\n";
-}
-
-/*
-    Parsing Functions
-*/
-void NVS::ParseGGA(string talker_id, string payload) {
-    cout << "Parsing GGA\n";
-    
 }
