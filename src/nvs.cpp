@@ -8,7 +8,7 @@ using namespace std;
 /*
     Utility Methods
 */
-double DefaultGetTime() {
+double default_get_time() {
     boost::posix_time::ptime present_time(
             boost::posix_time::microsec_clock::universal_time());
     boost::posix_time::time_duration duration(present_time.time_of_day());
@@ -19,10 +19,13 @@ void sleep_msecs(unsigned int msecs) {
     boost::this_thread::sleep(boost::posix_time::milliseconds(msecs));
 }
 
-////////////////////////////////////////////////////////////////////////////////
+
+/*
+    Primary Receiver Class
+*/
 
 NVS::NVS() {
-    time_handler_ = DefaultGetTime;
+    time_handler_ = default_get_time;
 
     /* serial port */
     serial_port_ = NULL;
@@ -31,16 +34,8 @@ NVS::NVS() {
 
     /* Reading */
     data_buffer_ = queue<string>();
-    // buffer_index_ = 0;
-    // reading_acknowledgment_ = false;
-    // bytes_remaining_ = false;
-    // header_length_ = 0;
-    // msgID_ = 0;
-    // data_read_ = NULL;
-    // read_timestamp_ = 0;
-    // parse_timestamp_ = 0;
 
-    /* Data Callbacks */
+    display_log_data_ = false;
 
 }
 
@@ -138,8 +133,6 @@ void NVS::StartReading() {
     read_thread_ = boost::shared_ptr<boost::thread>
         (new boost::thread( boost::bind(&NVS::ReadSerialPort, this)));
 
-    // put settings/requests here
-
     // ReadSerialPort();    
 }
 
@@ -157,6 +150,11 @@ void NVS::WaitForCommand() {
         sleep_msecs(10);
     }
 }
+
+// void log_data(string info) {
+//     if (display_log_data_)
+//         cout << info;
+// }
 
 void NVS::ReadSerialPort() {
     vector<string> new_data;
@@ -193,7 +191,6 @@ void NVS::BufferIncomingData(vector<string> msgs, size_t len) {
 
     for (vector<string>::const_iterator it = msgs.begin();
                                         it != msgs.end(); it++) {
-        // cout << "\t" << *it;
 
         // TODO stop if buffer full
         // TODO compare checksums
@@ -221,7 +218,8 @@ void NVS::DelegateParsing() {
     if (data_buffer_.empty())
         return;
 
-    cout << "\nRead Timestamp: " << read_timestamp_ << "\n";
+    if (display_log_data_)
+        cout << "\nRead Timestamp: " << read_timestamp_ << "\n";
 
     while (!data_buffer_.empty()) {
         msg.assign( data_buffer_.front() );
@@ -230,35 +228,37 @@ void NVS::DelegateParsing() {
         // Decide how to break up: Proprietary/Standard?
         if ((msg.substr(0,1) == "P") || (msg.substr(0,1) == "A")) {
             message_id.assign( msg.substr(0,5) );
-            cout << "\tMessage ID: " << message_id << "\n";
             payload.assign( msg.substr(6, (msg.size()-6))); //comma after msg id
         } else {
             talker_id.assign( msg.substr(0,2) );
-            message_id.assign( msg.substr(2,3) );
-            cout << "\tMessage ID: " << message_id << "\n";
+            message_id.assign( msg.substr(2,3) );          
             payload.assign( msg.substr(6, (msg.size()-6))); //comma after msg id
         }
+
+        if (display_log_data_)
+            cout << "\tMessage ID: " << message_id << "\n";
 
         // Send to correct parser function
         // TODO enumerate types
         /* NMEA standard messages */
-        if (message_id == "GGA") {
+        if (message_id == "GGA")
             ParseGGA(talker_id, payload);
-            continue;
-        }
-        if (message_id == "GSV") {
+        else if (message_id == "GSV")
             ParseGSV(talker_id, payload);
-            continue;
-        }
-        if (message_id == "GSA") {
+        else if (message_id == "GSA")
             ParseGSA(talker_id, payload);
-            continue;
-        }
+        else if (message_id == "GBS")
+            ParseGBS(talker_id, payload);
+        else if (message_id == "RMC")
+            ParseRMC(talker_id, payload);
         /* Proprietary Messages */
-        if (message_id == "PORZD") {
+        else if (message_id == "PORZD")
             ParsePORZD(payload);
-            continue;
-        }
+        else if (message_id == "ALVER")
+            ParseALVER(payload);
+        else
+            cout << "\tReceived Unknown message id: " << message_id << "\n";
+            cout << "\tMessage: " << msg << "\n";
     }
 }
 
@@ -271,58 +271,104 @@ void NVS::ParseGGA(string talker_id, string payload) {
     // cout << "Parsing GGA\n";
     vector<string> fields;
     boost::split(fields, payload, boost::is_any_of(","));
-    cout << "\t\tTime of position fix: " << fields[0] << "\n";
-    cout << "\t\t# of Satellites Using: " << fields[5] << "\n";
-    cout << "\t\tLatitude:  " << fields[1] << " " << fields[2] << "\n";
-    cout << "\t\tLongitude: " << fields[3] << " " << fields[4] << "\n";
-    cout << "\t\tAltitude:  " << fields[7] << "\n";
+
+    satCount = atoi(fields[4].c_str());
+
+    lat = atof(fields[1].c_str());
+    lon = atof(fields[3].c_str());
+    if (fields[2] == "S")
+        lat = (-1.0f)*lat;
+    if (fields[4] == "W")
+        lon = (-1.0f)*lon;
+    
+    alt = atof(fields[7].c_str());
+
+    if (display_log_data_) {
+        cout << "\t\tTime of position fix: " << fields[0] << "\n";
+        cout << "\t\t# of Satellites Using: " << satCount << "\n";
+        cout << "\t\tLatitude:  " << lat << "\n";
+        cout << "\t\tLongitude: " << lon << "\n";
+        cout << "\t\tAltitude:  " << alt << "\n";
+    }
 }
 
 void NVS::ParseGSV(string talker_id, string payload) {
-    cout << "\t\tParsing GSV\n";
+    if (display_log_data_)
+        cout << "\t\tParsing GSV\n";
 }
 
 void NVS::ParseGSA(string talker_id, string payload) {
-    // cout << "Parsing GGA\n";
-    // Mode: Auto 3D/2D or Manual 2D
-    if (payload.substr(0,1) == "A") {
-        cout << "\t\tAutomatic 2D/3D mode\n";
-    } else if (payload.substr(0,1) == "M") {
-        cout << "\t\tManual 2D mode\n";
-    } else {
-        cout << "\t\tunknown 2D/3D selection mode\n";
-        return;
-    }
+    vector<string> fields;
+    boost::split(fields, payload, boost::is_any_of(","));
 
-    // Fix mode 2D or 3D
-    if (payload.substr(2,1) == "1") {
-        cout << "\t\tFix Not Available\n";
-    } else if (payload.substr(2,1) == "2") {
-        cout << "\t\tFix Mode 2D\n";
-    } else if (payload.substr(2,1) == "3") {
-        cout << "\t\tFix Mode 3D\n";
-    } else {
-        cout << "\t\tunknown fix mode\n";
-        return;
+    if (display_log_data_) {
+        // Mode: Auto 3D/2D or Manual 2D
+        if (payload.substr(0,1) == "A")
+            cout << "\t\tAutomatic 2D/3D mode\n";
+        else if (payload.substr(0,1) == "M")
+            cout << "\t\tManual 2D mode\n";
+        else {
+            cout << "\t\tunknown 2D/3D selection mode\n";
+            return;
+        }
+        // Fix mode 2D or 3D
+        if (payload.substr(2,1) == "1")
+            cout << "\t\tFix Not Available\n";
+        else if (payload.substr(2,1) == "2")
+            cout << "\t\tFix Mode 2D\n";
+        else if (payload.substr(2,1) == "3")
+            cout << "\t\tFix Mode 3D\n";
+        else {
+            cout << "\t\tunknown fix mode\n";
+            return;
+        }
+    }
+}
+
+void NVS::ParseGBS(string talker_id, string payload) {
+    vector<string> fields;
+    boost::split(fields, payload, boost::is_any_of(","));
+
+    if (display_log_data_) {
+        cout << "\t\tMessage Fix Time:   " << fields[0] << "\n";
+        cout << "\t\tLatitude Error:  " << fields[1] << "\n";
+        cout << "\t\tLongitude Error: " << fields[2] << "\n";
+        cout << "\t\tAltitude Error:  " << fields[3] << "\n";
+        cout << "\t\tStd Dev of Position: " << fields[7] << "\n";
+    }
+}
+
+void NVS::ParseRMC(string talker_id, string payload) {
+    vector<string> fields;
+    boost::split(fields, payload, boost::is_any_of(","));
+
+    if (display_log_data_) {
+        cout << "\t\tMessage Fix Time:   " << fields[0] << "\n";
+        // cout << 
     }
 }
 
 /* Proprietary Messages */
+void NVS::ParseALVER(string payload) {
+    cout << "\t\tParsing ALVER\n";
+}
+
 void NVS::ParsePORZD(string payload) {
     // cout << "Parsing PORZD\n";
-    // Validity
-    if (payload.substr(0,1) == "A") {
-        cout << "\t\tData Valid\n";
-    } else if (payload.substr(0,1) == "V") {
-        cout << "\t\tData Not Valid\n";
-    } else {
-        cout << "\t\tData Validity is Unknown\n";
-        return;
-    }
-
-    // Value of RMS error
     rmsError = atof(payload.substr(2,5).c_str());
-    cout << "\t\tRMS Error: " << rmsError << "\n";
+
+    // Validity
+    if (display_log_data_) {
+        if (payload.substr(0,1) == "A")
+            cout << "\t\tData Valid\n";
+        else if (payload.substr(0,1) == "V")
+            cout << "\t\tData Not Valid\n";
+        else {
+            cout << "\t\tData Validity is Unknown\n";
+            return;
+        }
+        cout << "\t\tRMS Error: " << rmsError << "\n";
+    }
 }
 
 
@@ -331,10 +377,21 @@ void NVS::ParsePORZD(string payload) {
 */
 
 void NVS::ParseCommand(string cmd) {
+    // query the version
     if (cmd == "v") {
         if (GetVersion())
             cout << "Query Sent: GetVersion\n";
+        return;
     }
+    // Toggle log data display
+    if (cmd == "d") {
+        if (!display_log_data_)
+            display_log_data_ = true;
+        else
+            display_log_data_ = false;
+        return;
+    }
+
 }
 
 

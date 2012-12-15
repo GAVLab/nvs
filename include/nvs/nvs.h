@@ -25,14 +25,18 @@
 /* 
     Utility Functions
 */
-// TODO reevaluate
-double DefaultGetTime();
-
-// Sleep for specified milliseconds
-void sleep_msecs(unsigned int);
+double default_get_time();  // TODO reevaluate
+void sleep_msecs(unsigned int);  // Sleep for specified milliseconds
 
 
+/*
+    Primary Class For interfacing with the receiver
+*/
 class NVS {
+
+/*
+    Primary Stuff
+*/
 public:
     NVS();
     ~NVS();
@@ -48,6 +52,38 @@ public:
     void WaitForCommand();
 
 /*
+    Data-related stuff
+*/
+public:
+    /*
+        Data to send out to apps from receiver
+    */
+    float rmsError;     // PORZD - planar
+    bool dataIsValid;   
+    uint satCount;      // Number of satellites used in current solution
+    float lat;
+    float lon;
+    float alt;          // mean-sea-level (geoid), meters [as per GGA]
+    float sog;          // Speed over Ground (knots)
+    float cog;          // Course over Ground (degrees True)
+    float latErr;       // Latitude Error
+    float lonErr;       // Longitude Error
+    float altErr;       // Altitude Error
+
+
+    /*
+        Data from this API pertaining to data from receiver
+    */
+    double read_timestamp_;  // time stamp when last serial port read completed
+
+    /*
+        user attributes & output messaging
+    */
+    // void log_data(std::string);  // output takes in strings that represent data from the receiver
+    bool display_log_data_;  // Whether to print data to terminal as it comes in
+
+
+/*
     Private Functions
 */
 private:
@@ -57,8 +93,8 @@ private:
     void BufferIncomingData(std::vector<std::string>, size_t);
     void DelegateParsing();
 
-    bool wait_for_command_;
-    void ParseCommand(std::string);
+    bool wait_for_command_;   // Whether to continuously wait for user terminal input
+    void ParseCommand(std::string);   // decide how to act on user terminal input
 
     /* send data to the receiver */
     bool SendMessage(std::string, size_t);
@@ -71,8 +107,13 @@ private:
     void ParseGGA(std::string, std::string);
     void ParseGSV(std::string, std::string);
     void ParseGSA(std::string, std::string);
+    void ParseGBS(std::string, std::string);
+    void ParseRMC(std::string, std::string);
     /* Proprietary Messages */
     void ParsePORZD(std::string);
+    void ParseALVER(std::string);
+
+
 
 /*
     Private Attributes
@@ -103,25 +144,12 @@ private:
     /* 
         Incoming data buffers
     */
+    // Set whether to iteratively read data from the receiver
     bool reading_status_;
-    // Maximum size of an NVS log buffer
     std::queue<std::string> data_buffer_;
-    double read_timestamp_;         //!< time stamp when last serial port read completed
     // double parse_timestamp_;        //!< time stamp when last parse began
     // unsigned short msgID_;
   
-/*
-    Public Data from reciever in usable format
-*/
-public:
-    float rmsError; // PORZD - planar
-    bool dataIsValid; // PORZD
 
 };
-
-/*
-    Messages to send to reciever
-*/
-#define queryVersionMsg "$GPGPQ,ALVER*31"
-
 #endif 
