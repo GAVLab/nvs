@@ -17,8 +17,5 @@ int main (int argc, char *argv[]) {
     receiver->Connect(port, baudrate);
 
     // Because action is done in other threads, need to keep this one alive
-    while (1)
-        sleep_msecs(1000);
-
-    return 0;
+    receiver->WaitForCommand();
 }

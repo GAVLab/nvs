@@ -135,16 +135,28 @@ void NVS::StartReading() {
     reading_status_ = true;
     cout << "Start Reading\n";
 
+    read_thread_ = boost::shared_ptr<boost::thread>
+        (new boost::thread( boost::bind(&NVS::ReadSerialPort, this)));
+
     // put settings/requests here
 
-    ReadSerialPort();    
+    // ReadSerialPort();    
 }
 
 void NVS::StopReading() {
     reading_status_ = false;
 }
 
-
+void NVS::WaitForCommand() {
+    wait_for_command_ = true;
+    string command;
+    while (wait_for_command_) {
+        cin >> command;
+        if (!command.empty())
+            ParseCommand(command);
+        sleep_msecs(10);
+    }
+}
 
 void NVS::ReadSerialPort() {
     vector<string> new_data;
@@ -313,6 +325,20 @@ void NVS::ParsePORZD(string payload) {
     cout << "\t\tRMS Error: " << rmsError << "\n";
 }
 
+
+/*
+    User input
+*/
+
+void NVS::ParseCommand(string cmd) {
+    if (cmd == "v") {
+        if (GetVersion())
+            cout << "Query Sent: GetVersion\n";
+    }
+}
+
+
+
 /*
     Send Functions
 */
@@ -327,9 +353,11 @@ bool NVS::SendMessage(string msg, size_t len) {
     }
 }
 
-string NVS::GetVersion() {
-    string message = "$GPGPQ,ALVER*31<CR><LF>";
-    bool sent = SendMessage(message, message.size());
+bool NVS::SendMessage(uint8_t msg, size_t len) {
+    return true;
+}
 
-    return "version:\n";
+bool NVS::GetVersion() {
+    bool sent = SendMessage(queryVersionMsg, string(queryVersionMsg).size());
+    return sent;
 }

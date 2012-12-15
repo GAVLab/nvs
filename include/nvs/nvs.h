@@ -25,13 +25,11 @@
 /* 
     Utility Functions
 */
-// Default callback method for time stamping data.  Used if a
-// user callback is not set.  Returns the current time from the
-// CPU clock as the number of seconds from Jan 1, 1970 
+// TODO reevaluate
 double DefaultGetTime();
 
 // Sleep for specified milliseconds
-void sleep_msecs(unsigned int msecs);
+void sleep_msecs(unsigned int);
 
 
 class NVS {
@@ -39,12 +37,15 @@ public:
     NVS();
     ~NVS();
 
-    bool Connect(std::string port, int baudrate=115200);
+    bool Connect(std::string, int baudrate=115200);
     void Disconnect();
 
     bool IsConnected() {return is_connected_;}
     bool Ping(int num_attempts=5);
-    std::string GetVersion();
+
+    bool GetVersion();
+
+    void WaitForCommand();
 
 /*
     Private Functions
@@ -53,21 +54,25 @@ private:
     void StartReading();
     void StopReading();    
     void ReadSerialPort();
-    void BufferIncomingData(std::vector<std::string> msgs, size_t len);
+    void BufferIncomingData(std::vector<std::string>, size_t);
     void DelegateParsing();
 
-    bool SendMessage(std::string msg, size_t len);
+    bool wait_for_command_;
+    void ParseCommand(std::string);
 
+    /* send data to the receiver */
+    bool SendMessage(std::string, size_t);
+    bool SendMessage(uint8_t, size_t);
 
     /*
         Parse Specific Messages
     */
     /* NMEA Standard Messages */
-    void ParseGGA(std::string talker_id, std::string payload);
-    void ParseGSV(std::string talker_id, std::string payload);
-    void ParseGSA(std::string talker_id, std::string payload);
+    void ParseGGA(std::string, std::string);
+    void ParseGSV(std::string, std::string);
+    void ParseGSA(std::string, std::string);
     /* Proprietary Messages */
-    void ParsePORZD(std::string payload);
+    void ParsePORZD(std::string);
 
 /*
     Private Attributes
@@ -91,6 +96,8 @@ private:
     serial::Serial* serial_port_;
     bool is_connected_;
 
+    boost::shared_ptr<boost::thread> read_thread_;
+
     const static uint max_buffer_size_ = 5000;  
 
     /* 
@@ -111,5 +118,10 @@ public:
     bool dataIsValid; // PORZD
 
 };
+
+/*
+    Messages to send to reciever
+*/
+#define queryVersionMsg "$GPGPQ,ALVER*31"
 
 #endif 
