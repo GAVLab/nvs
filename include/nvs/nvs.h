@@ -56,6 +56,7 @@ public:
     /*
         Data to send out to apps from receiver
     */
+    int updRate;       // (Hz) rate at which receiver updates
     float rmsError;     // PORZD - planar
     bool dataIsValid;   
     uint satCountUsing; // Number of satellites used in current solution
@@ -70,7 +71,6 @@ public:
     float altErr;       // Altitude Error
     float gpsTime;      // Time of day (24hr) associated with the gps fix measurement
     float gpsDate;      // day month year
-    float magVar;       // magnetic variation in degrees
     float pdop;         // position dilution of precision
     float hdop;         // horizontal dilution of precision
     float vdop;         // verticcal dilution of precsion
@@ -99,7 +99,7 @@ private:
     void StartReading();
     void StopReading();    
     void ReadSerialPort();
-    void BufferIncomingData(std::vector<std::string>, size_t);
+    void BufferIncomingData(std::vector<std::string>);
     void DelegateParsing();
 
     bool wait_for_command_;             // Whether to continuously wait for user terminal input
@@ -111,7 +111,7 @@ private:
     bool SendMessage(std::string);
     bool SendMessage(const uint8_t*);
     bool SendMessage(const std::vector< uint8_t > &);
-    void QueryVersion();
+    void RequestNMEAMsgs();
 
     /*
         Parse Specific NMEA Messages

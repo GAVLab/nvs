@@ -25,8 +25,10 @@ void sleep_msecs(unsigned int msecs) {
  */
 const static string queryVersionMsg = "$GPGPQ,ALVER*31\r\n";
 const static string setBINRMsg = "$PORZA,0,115200,3*7E\r\n";
+const static string setDecPlaceMsg = "$PONME,6,6*59\r\n";
 // const uint8_t stopTransmissionMsg[4] = {0x10, 0x0E, 0x10, 0x03};
 const static string stopTransmissionMsg = "$PORZB*55\r\n";
+const static string factoryResetMsg = "$PORST,F*20\r\n";
 
 
 /*
@@ -41,6 +43,7 @@ NVS::NVS() {
     is_connected_ = false;
 
     /* Reading */
+    updRate = 1;
     data_buffer_ = queue<string>();
 
     display_log_data_ = false;
@@ -99,6 +102,7 @@ bool NVS::Connect(string port, int baudrate) {
 }
 
 void NVS::Disconnect() {
+    wait_for_command_ = false;
     if (reading_status_)
         StopReading();
     if (serial_port_ != NULL) {
@@ -125,7 +129,6 @@ bool NVS::Ping(int num_attempts) {
 
             string result_;
             result_.append((char*) result);
-            // cout << "Ping result: " << result_ << "\n";
 
             return true;
         }
@@ -137,18 +140,16 @@ bool NVS::Ping(int num_attempts) {
 
 void NVS::StartReading() {
     reading_status_ = true;
-    cout << "Start Reading\n";
+    
+    // Set Decimals
+    SendMessage(setDecPlaceMsg);
+    
+    // RequestNMEAMsgs();
 
     read_thread_ = boost::shared_ptr<boost::thread>
         (new boost::thread( boost::bind(&NVS::ReadSerialPort, this)));
 
-    QueryVersion();
-
-    // Set Decimals
-    SendMessage("$PONME,6,6*59");
-    cout << "Set to 6 decimal place output\n";
-
-    // ReadSerialPort();    
+    SendMessage(queryVersionMsg);
 }
 
 void NVS::StopReading() {
@@ -174,7 +175,6 @@ void NVS::WaitForCommand() {
 void NVS::ReadSerialPort() {
     vector<string> new_data;
     size_t len;
-    cout << "Reading Serial Port\n";
     // continuously read data from serial port
     while (reading_status_) {
         try{
@@ -191,12 +191,12 @@ void NVS::ReadSerialPort() {
         read_timestamp_ = time_handler_();
         // cout << "Read Timestamp: " << read_timestamp_;
         // add data to the buffer to be parsed
-        len = new_data.size();
-        BufferIncomingData(new_data, len);
+        BufferIncomingData(new_data);
     }
 }
 
-void NVS::BufferIncomingData(vector<string> msgs, size_t len) {
+void NVS::BufferIncomingData(vector<string> msgs) {
+    size_t len = msgs.size();
     //  TODO Check for overflow
     // bool too_many = false;
     // if ((data_buffer_.size() + len) > max_buffer_size_) {
@@ -427,12 +427,6 @@ void NVS::ParsePORZD(string payload) {
  */
 
 void NVS::ParseCommand(string cmd) {
-    // query the version
-    if (cmd == "v") {
-        QueryVersion();
-        cout << "Query Sent: GetVersion\n";
-        return;
-    }
     // Toggle log data display
     if (cmd == "d") {
         if (!display_log_data_) {
@@ -444,18 +438,17 @@ void NVS::ParseCommand(string cmd) {
         }
         return;
     }
-    // Send a kill all messages command to receiver
+    // kill any messages set to come in
     if (cmd == "k") {
         SendMessage(stopTransmissionMsg);
-        cout << "Sent message to delete list of packets to be transmitted\n";
+        cout << "Killing all incoming messages.\n";
     }
-    // Set binary protocols
-    if (cmd == "b") {
-        SendMessage(setBINRMsg);
-        cout << "Sent message to set binary protocols\n";
+    // Disconnect
+    if (cmd == "X") {
+        Disconnect();
+        cout << "Disconnecting\n";
     }
 }
-
 
 
 /*
@@ -488,9 +481,25 @@ bool NVS::SendMessage(const vector< uint8_t > & msg) {
     return true;
 }
 
-
-void NVS::QueryVersion() {
-    SendMessage(queryVersionMsg);
-}
-
+void NVS::RequestNMEAMsgs() {
+    stringstream request;
+    const char* to_insert[] = {"GBS","GGA","RMC","PORZD"};
+    vector<string> msgs (to_insert, to_insert+4);
+    request << "$PORZB";
+    cout << "Requesting NMEA Messages @ " << updRate << " Hz:\n";
+    for (vector<string>::const_iterator i = msgs.begin(); i != msgs.end(); i++) {
+        request << "," << *i << "," << updRate;
+        cout << "\t" << *i << "\n";
+    }
     
+    // Checksum
+    unsigned char checksum;
+    string message = request.str();
+    for (int i = 0; i < message.length(); i++) {
+        if (message[i] != '$') {
+            checksum ^= i;
+        }
+    }
+    request << "*" << checksum << "\r\n";
+    cout << request.str() << "\n";
+}
