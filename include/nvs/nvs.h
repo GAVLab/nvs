@@ -47,7 +47,7 @@ public:
     bool IsConnected() {return is_connected_;}
     bool Ping(int num_attempts=5);
 
-    bool GetVersion();
+    bool QueryVersion();
 
     void WaitForCommand();
 
@@ -72,9 +72,13 @@ public:
 
 
     /*
-        Data from this API pertaining to data from receiver
+        background info pertaining to data from receiver
     */
-    double read_timestamp_;  // time stamp when last serial port read completed
+    double read_timestamp_;         // time stamp when last serial port read completed
+    std::string manufacturer_;
+    std::string device_id_;
+    std::string firmware_version_;
+    int msg_rate_;                  // rate (Hz) at which data is sent out
 
     /*
         user attributes & output messaging
@@ -93,8 +97,8 @@ private:
     void BufferIncomingData(std::vector<std::string>, size_t);
     void DelegateParsing();
 
-    bool wait_for_command_;   // Whether to continuously wait for user terminal input
-    void ParseCommand(std::string);   // decide how to act on user terminal input
+    bool wait_for_command_;             // Whether to continuously wait for user terminal input
+    void ParseCommand(std::string);     // decide how to act on user terminal input
 
     /* send data to the receiver */
     bool SendMessage(std::string, size_t);
@@ -103,6 +107,7 @@ private:
     /*
         Parse Specific Messages
     */
+
     /* NMEA Standard Messages */
     void ParseGGA(std::string, std::string);
     void ParseGSV(std::string, std::string);

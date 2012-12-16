@@ -69,6 +69,7 @@ bool NVS::Connect(string port, int baudrate) {
         return false;
     } else {
         cout << "Successfully opened port: " << port << "\n";
+        cout << "\tBaudrate: " << baudrate << "\n";
     }
 
     serial_port_->flush();
@@ -133,6 +134,7 @@ void NVS::StartReading() {
     read_thread_ = boost::shared_ptr<boost::thread>
         (new boost::thread( boost::bind(&NVS::ReadSerialPort, this)));
 
+    QueryVersion();
     // ReadSerialPort();    
 }
 
@@ -256,9 +258,10 @@ void NVS::DelegateParsing() {
             ParsePORZD(payload);
         else if (message_id == "ALVER")
             ParseALVER(payload);
-        else
+        else {
             cout << "\tReceived Unknown message id: " << message_id << "\n";
             cout << "\tMessage: " << msg << "\n";
+        }
     }
 }
 
@@ -350,11 +353,16 @@ void NVS::ParseRMC(string talker_id, string payload) {
 
 /* Proprietary Messages */
 void NVS::ParseALVER(string payload) {
-    cout << "\t\tParsing ALVER\n";
+    vector<string> fields;
+    boost::split(fields, payload, boost::is_any_of(","));
+
+    manufacturer_ = fields[0];
+    device_id_ = fields[1];
+    firmware_version_ = fields[2];
+    cout << manufacturer_ << "  " << device_id_ << "  (v " << firmware_version_ << ")\n";        
 }
 
 void NVS::ParsePORZD(string payload) {
-    // cout << "Parsing PORZD\n";
     rmsError = atof(payload.substr(2,5).c_str());
 
     // Validity
@@ -379,19 +387,22 @@ void NVS::ParsePORZD(string payload) {
 void NVS::ParseCommand(string cmd) {
     // query the version
     if (cmd == "v") {
-        if (GetVersion())
-            cout << "Query Sent: GetVersion\n";
+        QueryVersion();
+        cout << "Query Sent: GetVersion\n";
         return;
     }
     // Toggle log data display
     if (cmd == "d") {
-        if (!display_log_data_)
+        if (!display_log_data_) {
             display_log_data_ = true;
-        else
+            cout << "Printing Log Data to screen\n";
+        } else {
             display_log_data_ = false;
+            cout << "Stopping Log Data print\n";
+        }
         return;
     }
-
+    // Send a kill all messages command to receiver
 }
 
 
@@ -414,7 +425,7 @@ bool NVS::SendMessage(uint8_t msg, size_t len) {
     return true;
 }
 
-bool NVS::GetVersion() {
+bool NVS::QueryVersion() {
     bool sent = SendMessage(queryVersionMsg, string(queryVersionMsg).size());
     return sent;
 }

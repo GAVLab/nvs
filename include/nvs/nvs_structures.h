@@ -19,7 +19,8 @@
 /*
     Messages to send to reciever
 */
-#define queryVersionMsg "$GPGPQ,ALVER*31"
+#define queryVersionMsg "$GPGPQ,ALVER*31\r\n"
+#define queryCOMSettingMsg "$PORZA,1,115200,*7D"
 
 
 /*
@@ -58,5 +59,17 @@ enum NMEA_PROP_MSGS {
     POAST
 };
 
+enum FIX_TYPE {
+    _NA=1,      // Fix Not available
+    _2D=2,      // 2D fix
+    _3D=3       // 3D fix
+};
+
+enum FIX_MODE {
+    N,          // Fix not available
+    A,          // Autonomous
+    D,          // Differential
+    E=6           // Estimated (dead reckoning)
+};
 
 #endif
