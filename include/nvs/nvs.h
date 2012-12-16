@@ -47,8 +47,6 @@ public:
     bool IsConnected() {return is_connected_;}
     bool Ping(int num_attempts=5);
 
-    bool QueryVersion();
-
     void WaitForCommand();
 
 /*
@@ -69,6 +67,8 @@ public:
     float latErr;       // Latitude Error
     float lonErr;       // Longitude Error
     float altErr;       // Altitude Error
+    float gpsTime;      // Time of day (24hr) associated with the gps fix measurement
+    float gpsDate;      // day month year
 
 
     /*
@@ -100,35 +100,38 @@ private:
     bool wait_for_command_;             // Whether to continuously wait for user terminal input
     void ParseCommand(std::string);     // decide how to act on user terminal input
 
-    /* send data to the receiver */
-    bool SendMessage(std::string, size_t);
-    bool SendMessage(uint8_t, size_t);
+    /*
+        send data to the receiver
+    */
+    bool SendMessage(std::string);
+    bool SendMessage(const uint8_t*);
+    bool SendMessage(const std::vector< uint8_t > &);
+    void QueryVersion();
 
     /*
-        Parse Specific Messages
+        Parse Specific NMEA Messages
     */
-
     /* NMEA Standard Messages */
     void ParseGGA(std::string, std::string);
     void ParseGSV(std::string, std::string);
     void ParseGSA(std::string, std::string);
     void ParseGBS(std::string, std::string);
     void ParseRMC(std::string, std::string);
-    /* Proprietary Messages */
+    /* NMEA Proprietary Messages */
     void ParsePORZD(std::string);
     void ParseALVER(std::string);
 
 
 
 /*
-    Private Attributes
-*/
+ * Private Attributes
+ */
 private:
     boost::function<double()> time_handler_;
 
     /*
-        Serial Port
-    */
+     *  Serial Port
+     */
     // Number of milliseconds between bytes received to timeout on.
     const static uint32_t serial_inter_byte_timeout_ = 100;
     // A constant number of milliseconds to wait after calling read.
@@ -147,14 +150,13 @@ private:
     const static uint max_buffer_size_ = 5000;  
 
     /* 
-        Incoming data buffers
-    */
-    // Set whether to iteratively read data from the receiver
-    bool reading_status_;
-    std::queue<std::string> data_buffer_;
-    // double parse_timestamp_;        //!< time stamp when last parse began
-    // unsigned short msgID_;
-  
+     *  Incoming data buffers
+     */
+    bool reading_status_;   // Set whether to iteratively read data from the receiver
+    std::queue<std::string> data_buffer_;  // valid messages are stored here for parsing
+
 
 };
+
+
 #endif 

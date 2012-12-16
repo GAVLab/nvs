@@ -1,13 +1,13 @@
 /*
-    Author: Robert Cofield, for GAVLab
-*/
+ *  Author: Robert Cofield, for GAVLab
+ */
 #include <nvs/nvs.h>
 
 using namespace std;
 
 /*
-    Utility Methods
-*/
+ *  Utility Methods
+ */
 double default_get_time() {
     boost::posix_time::ptime present_time(
             boost::posix_time::microsec_clock::universal_time());
@@ -19,11 +19,17 @@ void sleep_msecs(unsigned int msecs) {
     boost::this_thread::sleep(boost::posix_time::milliseconds(msecs));
 }
 
+/*
+ *  Messages to send to receiver
+ */
+const static std::string queryVersionMsg = "$GPGPQ,ALVER*31\r\n";
+const static std::string setBINRMsg = "$PORZA,0,115200,3*7E\r\n";
+const uint8_t stopTransmissionMsg[4] = {0x10, 0x0E, 0x10, 0x03};
+
 
 /*
-    Primary Receiver Class
-*/
-
+ *   Primary Receiver Class
+ */
 NVS::NVS() {
     time_handler_ = default_get_time;
 
@@ -267,8 +273,8 @@ void NVS::DelegateParsing() {
 
 
 /*
-    Parsing Functions for Specific Messages
-*/
+ *  Parsing Functions for Specific Messages
+ */
 /* NMEA standard messages */
 void NVS::ParseGGA(string talker_id, string payload) {
     // cout << "Parsing GGA\n";
@@ -345,9 +351,28 @@ void NVS::ParseRMC(string talker_id, string payload) {
     vector<string> fields;
     boost::split(fields, payload, boost::is_any_of(","));
 
+    gpsTime = atof(fields[0].c_str());
+    gpsDate = atof(fields[6].c_str());
+
+    if (fields[1] == "A")
+        dataIsValid = true;
+    else
+        dataIsValid = false;
+    
+    lat = atof(fields[2].c_str());
+    lon = atof(fields[3].c_str());
+    sog = atof(fields[4].c_str());
+    cog = atof(fields[5].c_str());
+
+
     if (display_log_data_) {
-        cout << "\t\tMessage Fix Time:   " << fields[0] << "\n";
-        // cout << 
+        cout << "\t\tDate:  " << gpsDate << "\n";
+        cout << "\t\tMessage Fix Time:   " << gpsTime << "\n";
+        cout << "\t\tData Valid:  " << dataIsValid << "\n";
+        cout << "\t\tLatitude:  " << lat << "\n";
+        cout << "\t\tLongitude: " << lon << "\n";
+        cout << "\t\tGround Speed:  " << sog << "\n";
+        cout << "\t\tGround Course: " << cog << "\n";
     }
 }
 
@@ -381,8 +406,8 @@ void NVS::ParsePORZD(string payload) {
 
 
 /*
-    User input
-*/
+ *  User input
+ */
 
 void NVS::ParseCommand(string cmd) {
     // query the version
@@ -403,15 +428,25 @@ void NVS::ParseCommand(string cmd) {
         return;
     }
     // Send a kill all messages command to receiver
+    if (cmd == "k") {
+        SendMessage(stopTransmissionMsg);
+        cout << "Sent message to delete list of packets to be transmitted\n";
+    }
+    // Set binary protocols
+    if (cmd == "b") {
+        SendMessage(setBINRMsg);
+        cout << "Sent message to set binary protocols\n";
+    }
 }
 
 
 
 /*
-    Send Functions
-*/
+ *  Send Functions
+ */
 
-bool NVS::SendMessage(string msg, size_t len) {
+bool NVS::SendMessage(string msg) {
+    size_t len = msg.size();
     size_t bytes_written = serial_port_->write(msg);
     if (bytes_written == len)
         return true;
@@ -421,11 +456,24 @@ bool NVS::SendMessage(string msg, size_t len) {
     }
 }
 
-bool NVS::SendMessage(uint8_t msg, size_t len) {
+bool NVS::SendMessage(const uint8_t* msg) {
+    size_t len = sizeof(msg);
+    size_t bytes_written = serial_port_->write(msg, len);
+    if (bytes_written == len)
+        return true;
+    else {
+        cout << "Full message was not sent over serial port\n";
+        return false;
+    }
+}
+
+bool NVS::SendMessage(const vector< uint8_t > & msg) {
     return true;
 }
 
-bool NVS::QueryVersion() {
-    bool sent = SendMessage(queryVersionMsg, string(queryVersionMsg).size());
-    return sent;
+
+void NVS::QueryVersion() {
+    SendMessage(queryVersionMsg);
 }
+
+    

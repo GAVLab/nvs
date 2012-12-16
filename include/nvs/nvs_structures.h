@@ -16,11 +16,6 @@
 #endif
 
 
-/*
-    Messages to send to reciever
-*/
-#define queryVersionMsg "$GPGPQ,ALVER*31\r\n"
-#define queryCOMSettingMsg "$PORZA,1,115200,*7D"
 
 
 /*
@@ -60,16 +55,29 @@ enum NMEA_PROP_MSGS {
 };
 
 enum FIX_TYPE {
-    _NA=1,      // Fix Not available
-    _2D=2,      // 2D fix
-    _3D=3       // 3D fix
+    _NA=1,          // Fix Not available
+    _2D=2,          // 2D fix
+    _3D=3           // 3D fix
 };
 
 enum FIX_MODE {
-    N,          // Fix not available
-    A,          // Autonomous
-    D,          // Differential
-    E=6           // Estimated (dead reckoning)
-};
+    N,              // Fix not available
+    A,              // Autonomous
+    D,              // Differential
+    E=6             // Estimated (dead reckoning)
+};  
+
+
+
+
+
+/*
+    Messages to send to receiver
+*/
+/* Hex messages */
+// #define silenceMsg {0x10, 0x0E, 0x10, 0x03};
+// uint8_t     silenceMsg[4] =     {0x10, 0x0E, 0x10, 0x03};
+/* String messages */
+
 
 #endif
