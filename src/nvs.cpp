@@ -19,12 +19,14 @@ void sleep_msecs(unsigned int msecs) {
     boost::this_thread::sleep(boost::posix_time::milliseconds(msecs));
 }
 
+
 /*
  *  Messages to send to receiver
  */
-const static std::string queryVersionMsg = "$GPGPQ,ALVER*31\r\n";
-const static std::string setBINRMsg = "$PORZA,0,115200,3*7E\r\n";
-const uint8_t stopTransmissionMsg[4] = {0x10, 0x0E, 0x10, 0x03};
+const static string queryVersionMsg = "$GPGPQ,ALVER*31\r\n";
+const static string setBINRMsg = "$PORZA,0,115200,3*7E\r\n";
+// const uint8_t stopTransmissionMsg[4] = {0x10, 0x0E, 0x10, 0x03};
+const static string stopTransmissionMsg = "$PORZB*55\r\n";
 
 
 /*
@@ -141,6 +143,11 @@ void NVS::StartReading() {
         (new boost::thread( boost::bind(&NVS::ReadSerialPort, this)));
 
     QueryVersion();
+
+    // Set Decimals
+    SendMessage("$PONME,6,6*59");
+    cout << "Set to 6 decimal place output\n";
+
     // ReadSerialPort();    
 }
 
@@ -276,12 +283,25 @@ void NVS::DelegateParsing() {
  *  Parsing Functions for Specific Messages
  */
 /* NMEA standard messages */
+void NVS::ParseGBS(string talker_id, string payload) {
+    vector<string> fields;
+    boost::split(fields, payload, boost::is_any_of(","));
+
+    if (display_log_data_) {
+        cout << "\t\tMessage Fix Time:   " << fields[0] << "\n";
+        cout << "\t\tLatitude Error:  " << fields[1] << "\n";
+        cout << "\t\tLongitude Error: " << fields[2] << "\n";
+        cout << "\t\tAltitude Error:  " << fields[3] << "\n";
+        cout << "\t\tStd Dev of Position: " << fields[7] << "\n";
+    }
+}
+
 void NVS::ParseGGA(string talker_id, string payload) {
     // cout << "Parsing GGA\n";
     vector<string> fields;
     boost::split(fields, payload, boost::is_any_of(","));
 
-    satCount = atoi(fields[4].c_str());
+    satCountUsing = atoi(fields[4].c_str());
 
     lat = atof(fields[1].c_str());
     lon = atof(fields[3].c_str());
@@ -294,21 +314,20 @@ void NVS::ParseGGA(string talker_id, string payload) {
 
     if (display_log_data_) {
         cout << "\t\tTime of position fix: " << fields[0] << "\n";
-        cout << "\t\t# of Satellites Using: " << satCount << "\n";
+        cout << "\t\t# of Satellites Using: " << satCountUsing << "\n";
         cout << "\t\tLatitude:  " << lat << "\n";
         cout << "\t\tLongitude: " << lon << "\n";
         cout << "\t\tAltitude:  " << alt << "\n";
     }
 }
 
-void NVS::ParseGSV(string talker_id, string payload) {
-    if (display_log_data_)
-        cout << "\t\tParsing GSV\n";
-}
-
 void NVS::ParseGSA(string talker_id, string payload) {
     vector<string> fields;
     boost::split(fields, payload, boost::is_any_of(","));
+
+    pdop = atof(fields[fields.size()-3].c_str());
+    hdop = atof(fields[fields.size()-2].c_str());
+    vdop = atof(fields[fields.size()-1].c_str());
 
     if (display_log_data_) {
         // Mode: Auto 3D/2D or Manual 2D
@@ -334,18 +353,16 @@ void NVS::ParseGSA(string talker_id, string payload) {
     }
 }
 
-void NVS::ParseGBS(string talker_id, string payload) {
+void NVS::ParseGSV(string talker_id, string payload) {
     vector<string> fields;
     boost::split(fields, payload, boost::is_any_of(","));
 
-    if (display_log_data_) {
-        cout << "\t\tMessage Fix Time:   " << fields[0] << "\n";
-        cout << "\t\tLatitude Error:  " << fields[1] << "\n";
-        cout << "\t\tLongitude Error: " << fields[2] << "\n";
-        cout << "\t\tAltitude Error:  " << fields[3] << "\n";
-        cout << "\t\tStd Dev of Position: " << fields[7] << "\n";
-    }
+    satCountView = atoi(fields[2].c_str());
+
+    if (display_log_data_)
+        cout << "\t\t# Satellites in View: " << satCountView << "\n";
 }
+
 
 void NVS::ParseRMC(string talker_id, string payload) {
     vector<string> fields;

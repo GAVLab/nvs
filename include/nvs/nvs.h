@@ -58,7 +58,8 @@ public:
     */
     float rmsError;     // PORZD - planar
     bool dataIsValid;   
-    uint satCount;      // Number of satellites used in current solution
+    uint satCountUsing; // Number of satellites used in current solution
+    uint satCountView;  //Number of satellite in view
     float lat;
     float lon;
     float alt;          // mean-sea-level (geoid), meters [as per GGA]
@@ -69,6 +70,10 @@ public:
     float altErr;       // Altitude Error
     float gpsTime;      // Time of day (24hr) associated with the gps fix measurement
     float gpsDate;      // day month year
+    float magVar;       // magnetic variation in degrees
+    float pdop;         // position dilution of precision
+    float hdop;         // horizontal dilution of precision
+    float vdop;         // verticcal dilution of precsion
 
 
     /*
@@ -112,14 +117,14 @@ private:
         Parse Specific NMEA Messages
     */
     /* NMEA Standard Messages */
-    void ParseGGA(std::string, std::string);
-    void ParseGSV(std::string, std::string);
-    void ParseGSA(std::string, std::string);
     void ParseGBS(std::string, std::string);
+    void ParseGGA(std::string, std::string);
+    void ParseGSA(std::string, std::string);
+    void ParseGSV(std::string, std::string);
     void ParseRMC(std::string, std::string);
     /* NMEA Proprietary Messages */
-    void ParsePORZD(std::string);
     void ParseALVER(std::string);
+    void ParsePORZD(std::string);
 
 
 
