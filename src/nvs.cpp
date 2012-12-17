@@ -143,8 +143,6 @@ void NVS::StartReading() {
     
     // Set Decimals
     SendMessage(setDecPlaceMsg);
-    
-    // RequestNMEAMsgs();
 
     read_thread_ = boost::shared_ptr<boost::thread>
         (new boost::thread( boost::bind(&NVS::ReadSerialPort, this)));
@@ -154,6 +152,7 @@ void NVS::StartReading() {
 
 void NVS::StopReading() {
     reading_status_ = false;
+    sleep_msecs(100);
 }
 
 void NVS::WaitForCommand() {
@@ -443,6 +442,11 @@ void NVS::ParseCommand(string cmd) {
         SendMessage(stopTransmissionMsg);
         cout << "Killing all incoming messages.\n";
     }
+    // request proper messages
+    if (cmd == "r") {
+        // cout << "Requesting NMEA Messages\n";
+        RequestNMEAMsgs();
+    }
     // Disconnect
     if (cmd == "X") {
         Disconnect();
@@ -482,24 +486,44 @@ bool NVS::SendMessage(const vector< uint8_t > & msg) {
 }
 
 void NVS::RequestNMEAMsgs() {
+    // put together the desired payload
     stringstream request;
-    const char* to_insert[] = {"GBS","GGA","RMC","PORZD"};
+    const char* to_insert[] = {"GBS","GGA","RMC","PORZD"}; // list of the desired message codes
     vector<string> msgs (to_insert, to_insert+4);
-    request << "$PORZB";
+    request << "PORZB";
     cout << "Requesting NMEA Messages @ " << updRate << " Hz:\n";
     for (vector<string>::const_iterator i = msgs.begin(); i != msgs.end(); i++) {
         request << "," << *i << "," << updRate;
         cout << "\t" << *i << "\n";
     }
+    // cout << "desired payload: " << request.str() << "\n";
     
-    // Checksum
-    unsigned char checksum;
-    string message = request.str();
-    for (int i = 0; i < message.length(); i++) {
-        if (message[i] != '$') {
-            checksum ^= i;
-        }
+    // bridge the two bits of code
+    const char* data_ = request.str().c_str();
+    char data[sizeof(data_)];
+    strcpy(data, data_);
+
+    /*bit of code that correctly computes a checksum*/
+    // char data[] = "PORZB,GBS,10,GGA,10,RMC,10,PORZD,10";
+    char *datapointer=&data[0];
+    char checksum=0;
+    while (*datapointer != '\0') {
+        checksum ^= *datapointer;
+        datapointer++;
     }
-    request << "*" << checksum << "\r\n";
-    cout << request.str() << "\n";
+    const char* checksumpointer = &checksum;
+    string cs = string(checksumpointer);
+    ostringstream os;
+    os << setw(2) << setfill('0') << hex << uppercase;
+    copy(cs.begin(), cs.end(), ostream_iterator<unsigned int>(os, " "));
+    string output = os.str();
+    cout << "checksum: " << output << "\n";
+    
+    // Put it all together
+    stringstream final_;
+    final_ << "$" << request.str() << "*" << output;
+    string final = final_.str();
+    // cout << "total message: " << final << "\n";
+
+    SendMessage(final);
 }

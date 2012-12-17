@@ -58,3 +58,7 @@ target_link_libraries(nvs ${NVS_LINK_LIBS})
 
 add_executable(run_nvs src/main.cc)
 target_link_libraries(run_nvs nvs)
+
+# allow large strings to be passed
+
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-stack-protector")
