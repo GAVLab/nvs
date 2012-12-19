@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <queue>
+#include <algorithm>
 
 #include "nvs_structures.h"
 #include <serial/serial.h> 
@@ -27,7 +28,8 @@
 */
 double default_get_time();  // TODO reevaluate
 void sleep_msecs(unsigned int);  // Sleep for specified milliseconds
-
+void print_hex(uint8_t);
+std::deque<int> get_indices(uint8_t*, const uint8_t);
 
 /*
     Primary Class For interfacing with the receiver
@@ -53,18 +55,13 @@ public:
     Data-related stuff
 */
 public:
-    int updRate;       // (Hz) rate at which receiver updates
-
-    /*
-        background info pertaining to data from receiver
-    */
+    int updRate;                    // (Hz) rate at which receiver updates
     double read_timestamp_;         // time stamp when last serial port read completed
     int msg_rate_;                  // rate (Hz) at which data is sent out
 
     /*
         user attributes & output messaging
     */
-    // void log_data(std::string);  // output takes in strings that represent data from the receiver
     bool display_log_data_;  // Whether to print data to terminal as it comes in
 
 
@@ -75,7 +72,7 @@ private:
     void StartReading();
     void StopReading();    
     void ReadSerialPort();
-    void BufferIncomingData(std::vector<std::string>);
+    void BufferIncomingData(uint8_t*, size_t);
     void DelegateParsing();
 
     bool wait_for_command_;             // Whether to continuously wait for user terminal input
@@ -84,7 +81,7 @@ private:
     /*
         send data to the receiver
     */
-    bool SendMessage(std::string);
+    bool SendMessage(std::string); // used for NMEA messages
     bool SendMessage(const uint8_t*);
     bool SendMessage(uint8_t*); // this is the version chris had
     bool SendMessage(const std::vector< uint8_t > &);
@@ -117,13 +114,20 @@ private:
     const static uint max_buffer_size_ = 5000;  
 
     /* 
-     *  Incoming data buffers
+     *  Incoming data buffering
      */
-    bool reading_status_;   // Set whether to iteratively read data from the receiver
-    std::queue<std::string> data_buffer_;  // valid messages are stored here for parsing
+    bool reading_status_;                       // Set whether to iteratively read data from the receiver
+    uint8_t msg_buffer_[MAX_MSG_SIZE];         // Holds bytes while searching for a complete message
+    // bool found_header_;                      // found the beginning of a complete message
+    std::deque<int> header_indices_;            // Location of the current message's header in incoming buffer
+    const static uint8_t header_byte_ = 0x10;   // starts message and preceeds the footer
+    std::deque<int> footer_indices_;            // Location of the current message's footer in incoming buffer
+    const static uint8_t footer_byte_ = 0x03;   // ends message
+    size_t buffer_len_;                         // size of the data which hasn't been processed
+    bool buffering_;                      // buffer not yet fully parsed
+    int payload_indices_[2];                    // where message currently being parsed lies (begin/end) within income buffer
 
 
 };
-
 
 #endif 

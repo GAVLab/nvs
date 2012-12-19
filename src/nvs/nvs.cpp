@@ -19,13 +19,22 @@ void sleep_msecs(unsigned int msecs) {
     boost::this_thread::sleep(boost::posix_time::milliseconds(msecs));
 }
 
+void print_hex(uint8_t byte) {
+    printf("0x%.2x ", byte);
+}
 
-/*
- *  Messages to send to receiver
- */
-// Request setting binary protocols
-const static string setBINRMsg = "$PORZA,0,115200,3*7E\r\n";
-const static string factoryResetMsg = "$PORST,F*20\r\n";
+// get the index of the first occurence of a certain value in an array
+deque<int> get_indices(uint8_t* array, const uint8_t des) {
+    deque<int> indices;
+    size_t len = sizeof(array);
+    for (int i = 0; i != len; i++) {
+        if (array[i] == des)
+            indices.push_back(i);
+    }
+    return indices;
+}
+
+
 
 /*
  *   Primary Receiver Class
@@ -40,10 +49,7 @@ NVS::NVS() {
 
     /* Reading */
     updRate = 1;
-    data_buffer_ = queue<string>();
-
     display_log_data_ = false;
-
 }
 
 NVS::~NVS() {
@@ -94,6 +100,9 @@ bool NVS::Connect(string port, int baudrate) {
 
     StartReading();
 
+    // TODO - have some loop be entered here for MOOS/ROS/etc
+    //      for standalone usage, this api provides the WaitForCommand loop
+
     return true;
 }
 
@@ -137,13 +146,17 @@ bool NVS::Ping(int num_attempts) {
 void NVS::StartReading() {
     reading_status_ = true;
     
-    // switch to BINR protocol
-    SendMessage(setBINRMsg);
+    // switch to BINR protocol, stop everything
+    SendMessage(setBINRMsgNMEA);
+    SendMessage(setBINRMsgBINR);
+    // SendMessage(reqSilenceMsg);
 
     read_thread_ = boost::shared_ptr<boost::thread>
         (new boost::thread( boost::bind(&NVS::ReadSerialPort, this)));
 
-    // SendMessage(queryVersionMsg);
+    sleep_msecs(1000);
+    SendMessage(reqParamMsg);
+    SendMessage(reqVersionMsg);
 }
 
 void NVS::StopReading() {
@@ -162,85 +175,110 @@ void NVS::WaitForCommand() {
     }
 }
 
-// void log_data(string info) {
-//     if (display_log_data_)
-//         cout << info;
-// }
 
 void NVS::ReadSerialPort() {
-    vector<string> new_data;
-
+    uint8_t new_data_buffer[MAX_NOUT_SIZE];
     size_t len;
+
     // continuously read data from serial port
     while (reading_status_) {
         try{
-            // len = serial_port_->read(buffer, max_buffer_size_);
-            new_data = serial_port_->readlines();
-        } catch (exception &e) {
-            cout << "Error reading serial port: " << e.what() << "\n";
+            len = serial_port_->read(new_data_buffer, MAX_NOUT_SIZE);
+        } catch (exception &e) { // most likely unplugged
+            cout << "Error reading serial port:\n\t" << e.what() << "\n";
             Disconnect();
             return;
         }
-        // TODO pass if empty
-
-        // Timestamp the read
-        read_timestamp_ = time_handler_();
-        // cout << "Read Timestamp: " << read_timestamp_;
-        // add data to the buffer to be parsed
-        BufferIncomingData(new_data);
+        // send if content
+        if (len != 0) {
+            // Timestamp the read
+            read_timestamp_ = time_handler_();
+            // cout << "Read Timestamp: " << read_timestamp_;
+            // add data to the buffer to be parsed
+            BufferIncomingData(new_data_buffer, len);
+        } else {
+            cout << "No content received\n";
+            sleep_msecs(1000);
+        }
     }
 }
 
-void NVS::BufferIncomingData(vector<string> msgs) {
-    size_t len = msgs.size();
-    //  TODO Check for overflow
-    // bool too_many = false;
-    // if ((data_buffer_.size() + len) > max_buffer_size_) {
-    //     too_many = true;
-    //     cout << "buffer overflow! skipping messages\n";
-    // }
-
-    for (vector<string>::const_iterator it = msgs.begin();
-                                        it != msgs.end(); it++) {
-
-        // TODO stop if buffer full
-        // TODO compare checksums
-
-        uint end_pos = it->size() - 5;
-        if ( (it->at( 0 ) != '$') | (it->at(end_pos) != '*') ) {
-            cout << "Received bad sentence\n";
-            continue;
-        }
-
-        data_buffer_.push( it->substr(1, end_pos - 1) );
-        // cout << "Payload: " << data_buffer_.back() << "\n";
+void NVS::BufferIncomingData(uint8_t* new_data, size_t len) {
+    cout << "BufferIncomingData\n";
+    // ! Assume that each new message begins right after the old one ends
+    //      no stray bytes
+    //  TODO Check for overflow better
+    if (len > MAX_NOUT_SIZE) {
+        cout << "NVS Buffer Overflow. Dumping new data.\n";
+        return;
     }
 
-    DelegateParsing();
+    if (len == 0)
+        cout << "no data received\n";
+    cout << "new_data: " << new_data << "\n";
+
+    // TODO stop if buffer full
+    // TODO pass if new_data empty
+    // TODO compare checksums?
+
+    header_indices_ = get_indices(new_data, header_byte_);
+    footer_indices_ = get_indices(new_data, footer_byte_);
+
+    printf("# header indices: %i\n", int(header_indices_.size()));
+    printf("# footer indices: %i\n", int(footer_indices_.size()));
+
+    if (header_indices_.size() < 2 || footer_indices_.size() < 1) {
+        cout << "not given enough indices\n";
+        return;
+    }
+
+    // deal with the front bytes
+    if (header_indices_.front() == (footer_indices_.front()+1)) { // got the tail end of a message - new_data begins with 0x10 0x03
+        header_indices_.pop_front(); // get rid of the first from each
+        footer_indices_.pop_front();
+    } else if (footer_indices_.front() < header_indices_.front())  // got the tail end of a message - new_data begins with 0x03
+        footer_indices_.pop_front(); // get rid of the first footer
+
+    if (header_indices_.size() < 2 || footer_indices_.size() < 1) {
+        cout << "not enough there after trimming front\n";
+        return;
+    }
+
+    // deal with the back bytes
+    if (header_indices_.back() == (footer_indices_.back()+1)) { // new_data cuts off in the middle of a payload
+        header_indices_.pop_back(); // get rid of last header
+    } else if (header_indices_.back() == len) { // newd_data cuts of in the middle of a footer -- last byte is 0x10
+        header_indices_.pop_back(); // get rid of last footer 0x10 and the last header 0x10
+        header_indices_.pop_back();
+    }
+
+    // TODO check that we have a sane number of both
+    cout << "Done checking back\n";
+
+    while(header_indices_.size() > 1) {
+        // get the next payload bounds
+        payload_indices_[0] = header_indices_[0];
+        payload_indices_[1] = header_indices_[1];
+        
+        // put the payload in the buffer
+        for (int i = payload_indices_[0]; i != payload_indices_[1]; i++)
+            msg_buffer_[i-payload_indices_[0]] = new_data[i];
+
+        // have it parsed
+        DelegateParsing();
+
+        // clean up
+        header_indices_.pop_front();
+        header_indices_.pop_front();
+        footer_indices_.pop_front();
+        delete msg_buffer_;
+    }
+    cout << "Done sending to DelegateParsing\n";
 }
 
 void NVS::DelegateParsing() {
-    // cout << "Delegate Parsing Data\n";
-    string msg;
-    string talker_id;
-    string message_id;
-    string payload;
-
-    if (data_buffer_.empty())
-        return;
-
-    if (display_log_data_)
-        cout << "\nRead Timestamp: " << read_timestamp_ << "\n";
-
-    // iterate over the buffer and send messages to the proper place until empty
-    while (!data_buffer_.empty()) {
-        msg.assign( data_buffer_.front() );
-        data_buffer_.pop();
-
-        // Send to correct parser function
-        // TODO enumerate types
-
-    }
+    cout << "Delegate Parsing\n";
+    cout << "msg_buffer_: " << msg_buffer_ << "\n";
 }
 
 
@@ -283,7 +321,6 @@ void NVS::ParseCommand(string cmd) {
 /*
  *  Send Functions
  */
-// used to send NMEA message(s)
 bool NVS::SendMessage(string msg) {
     size_t len = msg.size();
     size_t bytes_written = serial_port_->write(msg);
@@ -306,8 +343,14 @@ bool NVS::SendMessage(const uint8_t* msg) {
     }
 }
 
+bool NVS::SendMessage(uint8_t* msg) {
+    cout << "Fill me in\n";
+    return false;
+}
+
 
 bool NVS::SendMessage(const vector< uint8_t > & msg) {
+    cout << "Fill me in\n";
     return true;
 }
 
