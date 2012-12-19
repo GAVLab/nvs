@@ -26,10 +26,9 @@ void sleep_msecs(unsigned int msecs) {
 const static string queryVersionMsg = "$GPGPQ,ALVER*31\r\n";
 const static string setBINRMsg = "$PORZA,0,115200,3*7E\r\n";
 const static string setDecPlaceMsg = "$PONME,6,6*59\r\n";
-// const uint8_t stopTransmissionMsg[4] = {0x10, 0x0E, 0x10, 0x03};
 const static string stopTransmissionMsg = "$PORZB*55\r\n";
 const static string factoryResetMsg = "$PORST,F*20\r\n";
-
+const static string requestPrimaryMsg = "$PORZB,GBS,2,GGA,2,RMC,2,PORZD,2*4D\r\n";
 
 /*
  *   Primary Receiver Class
@@ -374,12 +373,11 @@ void NVS::ParseRMC(string talker_id, string payload) {
         dataIsValid = true;
     else
         dataIsValid = false;
-    
+
     lat = atof(fields[2].c_str());
     lon = atof(fields[3].c_str());
     sog = atof(fields[4].c_str());
     cog = atof(fields[5].c_str());
-
 
     if (display_log_data_) {
         cout << "\t\tDate:  " << gpsDate << "\n";
@@ -444,7 +442,7 @@ void NVS::ParseCommand(string cmd) {
     }
     // request proper messages
     if (cmd == "r") {
-        // cout << "Requesting NMEA Messages\n";
+        cout << "Requesting NMEA Messages\n";
         RequestNMEAMsgs();
     }
     // Disconnect
@@ -486,7 +484,7 @@ bool NVS::SendMessage(const vector< uint8_t > & msg) {
 }
 
 void NVS::RequestNMEAMsgs() {
-    // put together the desired payload
+/*    // put together the desired payload
     stringstream request;
     const char* to_insert[] = {"GBS","GGA","RMC","PORZD"}; // list of the desired message codes
     vector<string> msgs (to_insert, to_insert+4);
@@ -503,11 +501,11 @@ void NVS::RequestNMEAMsgs() {
     char data[sizeof(data_)];
     strcpy(data, data_);
 
-    /*bit of code that correctly computes a checksum*/
+    // bit of code that correctly computes a checksum
     // char data[] = "PORZB,GBS,10,GGA,10,RMC,10,PORZD,10";
     char *datapointer=&data[0];
     char checksum=0;
-    while (*datapointer != '\0') {
+    while (*datapointer != '\0' && sizeof(checksum) < 1) {
         checksum ^= *datapointer;
         datapointer++;
     }
@@ -521,9 +519,11 @@ void NVS::RequestNMEAMsgs() {
     
     // Put it all together
     stringstream final_;
-    final_ << "$" << request.str() << "*" << output;
+    final_ << "$" << request.str() << "*" << output << "\r\n";
     string final = final_.str();
-    // cout << "total message: " << final << "\n";
+    cout << "total message: " << final << "\n";
+*/
 
-    SendMessage(final);
+    
+    SendMessage(requestPrimaryMsg);
 }

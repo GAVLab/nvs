@@ -37,7 +37,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # set headers and sources
 
-set(NVS_SRCS src/nvs.cpp src/main.cc) # may need to take the main out of here?
+set(NVS_SRCS src/nvs/nvs.cpp)
 set(NVS_HEADERS include/nvs/nvs.h
                 include/nvs/nvs_structures.h)
 
@@ -56,9 +56,45 @@ target_link_libraries(nvs ${NVS_LINK_LIBS})
 
 # make run file
 
-add_executable(run_nvs src/main.cc)
+add_executable(run_nvs src/nvs/main.cc)
 target_link_libraries(run_nvs nvs)
 
 # allow large strings to be passed
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-stack-protector")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-stack-protector")
+
+#install
+#don't do this if building with ros
+
+IF(NOT CMAKE_INSTALL_PREFIX)
+    SET(CMAKE_INSTALL_PREFIX /usr/local)
+ENDIF(NOT CMAKE_INSTALL_PREFIX)
+
+INSTALL(TARGETS nvs
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib)
+
+IF(NOT CMAKE_FIND_INSTALL_PATH)
+    set(CMAKE_FIND_INSTALL_PATH ${CMAKE_ROOT})
+ENDIF(NOT CMAKE_FIND_INSTALL_PATH)
+
+INSTALL(FILES Findnvs.cmake DESTINATION ${CMAKE_FIND_INSTALL_PATH}/Modules/)
+
+# uninstall 
+
+ADD_CUSTOM_TARGET(uninstall @echo uninstall package)
+
+IF (UNIX)
+ADD_CUSTOM_COMMAND(
+    COMMENT "uninstall package"
+    COMMAND xargs ARGS rm < install_manifest.txt
+  
+    TARGET  uninstall
+)
+ELSE(UNIX)
+ADD_CUSTOM_COMMAND(
+    COMMENT "uninstall only implemented in unix"
+    TARGET  uninstall
+)
+ENDIF(UNIX)
