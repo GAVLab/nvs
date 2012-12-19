@@ -20,17 +20,20 @@ void sleep_msecs(unsigned int msecs) {
 }
 
 void print_hex(uint8_t byte) {
-    printf("0x%.2x ", byte);
+    printf("%.2x:", byte);
 }
 
 // get the index of the first occurence of a certain value in an array
 deque<int> get_indices(uint8_t* array, const uint8_t des) {
+    cout << "get_indices\n";
     deque<int> indices;
     size_t len = sizeof(array);
     for (int i = 0; i != len; i++) {
         if (array[i] == des)
             indices.push_back(i);
+        print_hex(array[i]);
     }
+    cout << "done getting indices\n";
     return indices;
 }
 
@@ -146,17 +149,21 @@ bool NVS::Ping(int num_attempts) {
 void NVS::StartReading() {
     reading_status_ = true;
     
-    // switch to BINR protocol, stop everything
-    SendMessage(setBINRMsgNMEA);
-    SendMessage(setBINRMsgBINR);
-    // SendMessage(reqSilenceMsg);
-
     read_thread_ = boost::shared_ptr<boost::thread>
         (new boost::thread( boost::bind(&NVS::ReadSerialPort, this)));
+
+    // switch to BINR protocol, stop everything
+    SendMessage(setBINRMsgNMEA);
+    SendMessage(reqSilenceMsg);
+    SendMessage(setBINRMsgBINR);
+    SendMessage(setBINRMsgBINR_);
+    SendMessage(setBINRMsgBINR__);
+    // SendMessage("$GPGPQ,ALVER*31\r\n");
 
     sleep_msecs(1000);
     SendMessage(reqParamMsg);
     SendMessage(reqVersionMsg);
+    SendMessage(reqTestMsg);
 }
 
 void NVS::StopReading() {
@@ -198,7 +205,7 @@ void NVS::ReadSerialPort() {
             BufferIncomingData(new_data_buffer, len);
         } else {
             cout << "No content received\n";
-            sleep_msecs(1000);
+            // sleep_msecs(500);
         }
     }
 }
