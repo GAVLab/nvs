@@ -53,36 +53,12 @@ public:
     Data-related stuff
 */
 public:
-    /*
-        Data to send out to apps from receiver
-    */
     int updRate;       // (Hz) rate at which receiver updates
-    float rmsError;     // PORZD - planar
-    bool dataIsValid;   
-    uint satCountUsing; // Number of satellites used in current solution
-    uint satCountView;  //Number of satellite in view
-    float lat;
-    float lon;
-    float alt;          // mean-sea-level (geoid), meters [as per GGA]
-    float sog;          // Speed over Ground (knots)
-    float cog;          // Course over Ground (degrees True)
-    float latErr;       // Latitude Error
-    float lonErr;       // Longitude Error
-    float altErr;       // Altitude Error
-    float gpsTime;      // Time of day (24hr) associated with the gps fix measurement
-    float gpsDate;      // day month year
-    float pdop;         // position dilution of precision
-    float hdop;         // horizontal dilution of precision
-    float vdop;         // verticcal dilution of precsion
-
 
     /*
         background info pertaining to data from receiver
     */
     double read_timestamp_;         // time stamp when last serial port read completed
-    std::string manufacturer_;
-    std::string device_id_;
-    std::string firmware_version_;
     int msg_rate_;                  // rate (Hz) at which data is sent out
 
     /*
@@ -110,22 +86,8 @@ private:
     */
     bool SendMessage(std::string);
     bool SendMessage(const uint8_t*);
+    bool SendMessage(uint8_t*); // this is the version chris had
     bool SendMessage(const std::vector< uint8_t > &);
-    void RequestNMEAMsgs();
-
-    /*
-        Parse Specific NMEA Messages
-    */
-    /* NMEA Standard Messages */
-    void ParseGBS(std::string, std::string);
-    void ParseGGA(std::string, std::string);
-    void ParseGSA(std::string, std::string);
-    void ParseGSV(std::string, std::string);
-    void ParseRMC(std::string, std::string);
-    /* NMEA Proprietary Messages */
-    void ParseALVER(std::string);
-    void ParsePORZD(std::string);
-
 
 
 /*
