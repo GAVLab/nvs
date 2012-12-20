@@ -28,7 +28,7 @@
 /*
  *  Messages to send to receiver
  */
-const static std::string setBINRMsgNMEA = "$PORZA,0,115200,4*79\r\n"; // Request setting binary protocols
+const static std::string setBINRMsgNMEA = "$PORZA,2,115200,3*7C\r\n"; // Request setting binary protocols
 // chapter 4.3 -  sets binr, baud rates, port number 1
 const static uint8_t setBINRMsgBINR[10] = {0x10, 0x0b, 0x31, 0x00,0xc2,0x01,0x00, 0x04, 0x10,0x03};
 // chapter 36.2 - set binr, nothing else

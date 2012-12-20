@@ -30,7 +30,7 @@ double default_get_time();  // TODO reevaluate
 void sleep_msecs(unsigned int);  // Sleep for specified milliseconds
 void print_hex(uint8_t);
 std::deque<int> get_indices(uint8_t*, const uint8_t);
-bool stob(string const &);
+bool stob(const std::string&);
 
 
 

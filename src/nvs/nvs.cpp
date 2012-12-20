@@ -23,7 +23,7 @@ void print_hex(uint8_t byte) {
     printf("%.2x:", byte);
 }
 
-bool stob(string const & s) {
+bool stob(const string& s) {
     return s != "0";
 }
 
@@ -101,7 +101,7 @@ bool NVS::Connect(string port, int baudrate) {
         delete serial_port_;
         serial_port_ = NULL;
         is_connected_ = false;
-        return false;
+        Disconnect();
     } else {
         cout << "Successfully found NVS\n";
         is_connected_ = true;
@@ -163,6 +163,9 @@ void NVS::StartReading() {
     //! FIXME Not switching to binary protocol?
     if (!is_binr_) { // instance uses NMEA
         SendMessage(setBINRMsgNMEA);
+        sleep_msecs(1000);
+        SendMessage(setBINRMsgBINR_);
+        SendMessage(setBINRMsgBINR__);
     } else { // instance uses BINR
         SendMessage(setBINRMsgBINR__);
         sleep_msecs(100);
@@ -211,7 +214,7 @@ void NVS::ReadSerialPort() {
             BufferIncomingData(new_data_buffer, len);
         } else {
             cout << "No content received\n";
-            // sleep_msecs(500);
+            sleep_msecs(500);
         }
     }
 }

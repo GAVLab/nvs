@@ -6,7 +6,8 @@ using namespace std;
 int main (int argc, char *argv[]) {
     NVS *receiver = new NVS;
 
-    string port = "/dev/ttyUSB0";
+    // defaults
+    string port = "/dev/ttyUSB0"; 
     int baudrate = 115200;
 
     // CL parsing for port/baudrate
