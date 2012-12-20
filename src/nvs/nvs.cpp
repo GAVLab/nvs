@@ -23,6 +23,10 @@ void print_hex(uint8_t byte) {
     printf("%.2x:", byte);
 }
 
+bool stob(string const & s) {
+    return s != "0";
+}
+
 // get the index of the first occurence of a certain value in an array
 deque<int> get_indices(uint8_t* array, const uint8_t des) {
     cout << "get_indices\n";
@@ -53,6 +57,8 @@ NVS::NVS() {
     /* Reading */
     updRate = 1;
     display_log_data_ = false;
+
+    is_binr_ = false;
 }
 
 NVS::~NVS() {
@@ -69,7 +75,7 @@ bool NVS::Connect(string port, int baudrate) {
     try {
         serial_port_ = new serial::Serial(port, baudrate, timeout_);
     }
-    catch (exception e) {
+    catch (const exception & e) {
         cout << "Failed to create connection on port: " << port 
             << "\nErr: " << e.what() << "\n";
         serial_port_ = NULL;
@@ -103,8 +109,7 @@ bool NVS::Connect(string port, int baudrate) {
 
     StartReading();
 
-    // TODO - have some loop be entered here for MOOS/ROS/etc
-    //      for standalone usage, this api provides the WaitForCommand loop
+    // TODO - have some loop be entered here for MOOS/ROS/etc -- for standalone usage, this api provides the WaitForCommand loop
 
     return true;
 }
@@ -144,6 +149,7 @@ bool NVS::Ping(int num_attempts) {
         cout << "\nError pinging receiver: " << e.what() << "\n";
         return false;
     }
+    return false;
 }
 
 void NVS::StartReading() {
@@ -152,36 +158,36 @@ void NVS::StartReading() {
     read_thread_ = boost::shared_ptr<boost::thread>
         (new boost::thread( boost::bind(&NVS::ReadSerialPort, this)));
 
-    // switch to BINR protocol, stop everything
-    SendMessage(setBINRMsgNMEA);
-    SendMessage(reqSilenceMsg);
-    SendMessage(setBINRMsgBINR);
-    SendMessage(setBINRMsgBINR_);
-    SendMessage(setBINRMsgBINR__);
+    sleep_msecs(1000);
+
+    //! FIXME Not switching to binary protocol?
+    if (!is_binr_) { // instance uses NMEA
+        SendMessage(setBINRMsgNMEA);
+    } else { // instance uses BINR
+        SendMessage(setBINRMsgBINR__);
+        sleep_msecs(100);
+        SendMessage(reqParamMsg);
+        SendMessage(reqVersionMsg);
+        SendMessage(reqTestMsg);
+    }
+    
+    // SendMessage(setBINRMsgNMEA);
+    // SendMessage(reqSilenceMsg);
+    // SendMessage(setBINRMsgBINR);
+    // SendMessage(setBINRMsgBINR_);
+    // SendMessage(setBINRMsgBINR__);
     // SendMessage("$GPGPQ,ALVER*31\r\n");
 
-    sleep_msecs(1000);
-    SendMessage(reqParamMsg);
-    SendMessage(reqVersionMsg);
-    SendMessage(reqTestMsg);
+    // sleep_msecs(1000);
+    // SendMessage(reqParamMsg);
+    // SendMessage(reqVersionMsg);
+    // SendMessage(reqTestMsg);
 }
 
 void NVS::StopReading() {
     reading_status_ = false;
     sleep_msecs(100);
 }
-
-void NVS::WaitForCommand() {
-    wait_for_command_ = true;
-    string command;
-    while (wait_for_command_) {
-        cin >> command;
-        if (!command.empty())
-            ParseCommand(command);
-        sleep_msecs(10);
-    }
-}
-
 
 void NVS::ReadSerialPort() {
     uint8_t new_data_buffer[MAX_NOUT_SIZE];
@@ -209,6 +215,18 @@ void NVS::ReadSerialPort() {
         }
     }
 }
+
+void NVS::WaitForCommand() {
+    wait_for_command_ = true;
+    string command;
+    while (wait_for_command_) {
+        cin >> command;
+        if (!command.empty())
+            ParseCommand(command);
+        sleep_msecs(10);
+    }
+}
+
 
 void NVS::BufferIncomingData(uint8_t* new_data, size_t len) {
     cout << "BufferIncomingData\n";

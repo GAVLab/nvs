@@ -18,8 +18,8 @@
 #include <boost/thread/pthread/condition_variable_fwd.hpp>
 #include <boost/algorithm/string.hpp>
 
-// #include <boost/thread/thread.hpp>
-// #include <boost/thread/locks.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/thread/locks.hpp>
 
 #define PI 3.14159265
 
@@ -30,6 +30,9 @@ double default_get_time();  // TODO reevaluate
 void sleep_msecs(unsigned int);  // Sleep for specified milliseconds
 void print_hex(uint8_t);
 std::deque<int> get_indices(uint8_t*, const uint8_t);
+bool stob(string const &);
+
+
 
 /*
     Primary Class For interfacing with the receiver
@@ -63,6 +66,8 @@ public:
         user attributes & output messaging
     */
     bool display_log_data_;  // Whether to print data to terminal as it comes in
+
+    bool is_binr_;
 
 
 /*

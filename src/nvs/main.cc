@@ -1,4 +1,4 @@
-#include "nvs/nvs.h"
+#include <nvs/nvs.h>
 #include <iostream>
 
 using namespace std;
@@ -6,14 +6,18 @@ using namespace std;
 int main (int argc, char *argv[]) {
     NVS *receiver = new NVS;
 
-    // CL parsing for port/baudrate
     string port = "/dev/ttyUSB0";
     int baudrate = 115200;
+
+    // CL parsing for port/baudrate
     switch (argc) {
+        case 4: // third argument
+            receiver->is_binr_ = stob(argv[3]);
         case 3:
             istringstream(argv[2]) >> baudrate;
         case 2:
             port = argv[1];
+            break;
     }
 
     receiver->Connect(port, baudrate);
