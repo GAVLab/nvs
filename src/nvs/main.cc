@@ -34,12 +34,15 @@ int main (int argc, char *argv[]) {
     // pvt[3]=0x10;
     // pvt[4]=0x03; 
     // bool result2 = receiver->SendMessage(&pvt[0],5);
-    uint8_t meas_interval=0x14;
     
-    receiver->RequestRaw(meas_interval); 
 
 
+    //uint8_t meas_interval=0x14;
+    
+    //receiver->RequestRaw(meas_interval); 
 
+
+/
 
 
     while(1);
