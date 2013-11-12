@@ -1,8 +1,10 @@
 /*
  *  Author: Robert Cofield, for GAVLab
  */
-#include <nvs/nvs.h>
 
+ #include <nvs/nvs.h>
+
+using namespace nvs; 
 using namespace std;
 
 /*
@@ -19,27 +21,73 @@ void sleep_msecs(unsigned int msecs) {
     boost::this_thread::sleep(boost::posix_time::milliseconds(msecs));
 }
 
-void print_hex(uint8_t byte) {
-    printf("%.2x:", byte);
+inline void printHex(uint8_t *data, int length) {
+    for (int i = 0; i < length; ++i) {
+        printf("0x%.2X ", (unsigned) (unsigned char) data[i]);
+    }
+    printf("\n");
 }
+
+inline void DefaultPortSettingsCallback(RspPort_Sts port_settings,
+        double time_stamp) {
+    std::cout << "RSP_SET:";
+    cout << port_settings.header.dle; 
+    cout << port_settings.header.message_id; 
+    cout << port_settings.port_no; 
+    cout << port_settings.baud_rate; 
+    cout << port_settings.protocol; 
+    cout << port_settings.footer.dle; 
+    cout << port_settings.footer.etx; 
+}
+
+inline void DefaultRawDataCallback(RawData raw_data, 
+        double time_stamp){
+    std::cout << "RAW_DATA:";
+    cout << raw_data.header.dle; 
+    cout << raw_data.header.message_id; 
+    cout << raw_data.time; 
+    cout << raw_data.week_number; 
+    cout << raw_data.gps_utc_time_shift; 
+    cout << raw_data.rec_time_correction; 
+    cout << raw_data.signal_type; 
+    cout << raw_data.sat_number; 
+    cout << raw_data.sig_noise_ratio; 
+    cout << raw_data.carrier_phase; 
+    cout << raw_data.pseudo_range; 
+    cout << raw_data.doppler_freq; 
+    cout << raw_data.raw_data_flags; 
+    cout << raw_data.reserved; 
+    cout << raw_data.footer.dle; 
+    cout << raw_data.footer.etx;  
+
+}
+
+inline void DefaultSoftwareCallback(RspSoftware software_version, 
+        double time_stamp){
+    
+    std::cout << "RSP_SOFTW:";
+    cout << software_version.header.dle; 
+    cout << software_version.header.message_id; 
+    cout << software_version.num_channels; 
+    cout << software_version.version_identifier; 
+    cout << software_version.serial_num; 
+    cout << software_version.reserved; 
+    cout << software_version.reserved2; 
+    cout << software_version.reserved3; 
+    cout << software_version.reserved4; 
+    cout << software_version.footer.dle; 
+    cout << software_version.footer.etx;  
+
+}
+
+
+
+
 
 bool stob(const string& s) {
     return s != "0";
 }
 
-// get the index of the first occurence of a certain value in an array
-deque<int> get_indices(uint8_t* array, const uint8_t des) {
-    cout << "get_indices\n";
-    deque<int> indices;
-    size_t len = sizeof(array);
-    for (int i = 0; i != len; i++) {
-        if (array[i] == des)
-            indices.push_back(i);
-        print_hex(array[i]);
-    }
-    cout << "done getting indices\n";
-    return indices;
-}
 
 
 
@@ -50,15 +98,23 @@ NVS::NVS() {
     time_handler_ = default_get_time;
 
     /* serial port */
-    serial_port_ = NULL;
+    serial_port_usb = NULL;
     reading_status_ = false;
     is_connected_ = false;
 
     /* Reading */
-    updRate = 1;
     display_log_data_ = false;
 
     is_binr_ = false;
+    msgID = 0; 
+    buffer_index_ = 0;
+    bytes_remaining_ = false;
+
+    //CallBacks
+    port_settings_callback_=DefaultPortSettingsCallback; 
+    raw_data_callback_ = DefaultRawDataCallback;
+    software_callback_=  DefaultSoftwareCallback; 
+
 }
 
 NVS::~NVS() {
@@ -72,21 +128,28 @@ bool NVS::Connect(string port, int baudrate) {
                                                serial_read_timeout_multiplier_,
                                                serial_write_timeout_constant_,
                                                serial_write_timeout_multiplier_);
-    try {
-        serial_port_ = new serial::Serial(port, baudrate, timeout_);
-    }
+    serial::bytesize_t bytesize = serial::eightbits;
+    serial::parity_t parity = serial::parity_odd;
+    serial::stopbits_t stopbits = serial::stopbits_one;
+
+try {
+    //serial_port_usb = new serial::Serial(port, baudrate, timeout_);
+    serial_port_usb = new serial::Serial(port, baudrate, timeout_,bytesize,parity,stopbits);
+}
+    
     catch (const exception & e) {
         cout << "Failed to create connection on port: " << port 
             << "\nErr: " << e.what() << "\n";
-        serial_port_ = NULL;
+        serial_port_usb = NULL;
         is_connected_ = false;
         return false;
     }
+    
 
-    if (!serial_port_->isOpen()) {
+    if (!serial_port_usb->isOpen()) {
         cout << "Failed create open port: " << port << "\n";
-        delete serial_port_;
-        serial_port_ = NULL;
+        delete serial_port_usb;
+        serial_port_usb = NULL;
         is_connected_ = false;
         return false;
     } else {
@@ -94,64 +157,73 @@ bool NVS::Connect(string port, int baudrate) {
         cout << "\tBaudrate: " << baudrate << "\n";
     }
 
-    serial_port_->flush();
+    
+    serial_port_usb->flush();
 
-    if (!Ping()) {
+    if (false) { //!Ping()
         cout << "NVS not found on port: " << port << "\n";
-        delete serial_port_;
-        serial_port_ = NULL;
+        delete serial_port_usb;
+       serial_port_usb = NULL;
         is_connected_ = false;
         Disconnect();
     } else {
         cout << "Successfully found NVS\n";
         is_connected_ = true;
     }
-
+    
+    
     StartReading();
-
-    // TODO - have some loop be entered here for MOOS/ROS/etc -- for standalone usage, this api provides the WaitForCommand loop
-
+    is_connected_=true;
     return true;
 }
+
+
+
+
+
+
 
 void NVS::Disconnect() {
     wait_for_command_ = false;
     if (reading_status_)
         StopReading();
-    if (serial_port_ != NULL) {
-        if (serial_port_->isOpen())
-            serial_port_->close();
-        delete serial_port_;
-        serial_port_ = NULL;
+    if (serial_port_usb != NULL) {
+        if (serial_port_usb->isOpen())
+            serial_port_usb->close();
+        delete serial_port_usb;
+        serial_port_usb = NULL;
     }
 }
 
-bool NVS::Ping(int num_attempts) {
-    try {
-        while ((num_attempts--) > 0) {
-            sleep_msecs(1000);
+// bool NVS::Ping(int num_attempts) {
+//     try {
+//         while ((num_attempts--) > 0) {
+//             sleep_msecs(1000);
 
-            unsigned char result[5000];
-            size_t bytes_read;
-            bytes_read = serial_port_->read(result, 5000);
+//             unsigned char result[5000];
+//             size_t bytes_read;
+//             bytes_read = serial_port_usb->read(result, 5000);
 
-            if (bytes_read < 8) {
-                cout << "Only read " << bytes_read << " bytes in response to ping\n";
-                continue;
-            }
+//             if (bytes_read < 8) {
+//                 cout << "Only read " << bytes_read << " bytes in response to ping\n";
+//                 continue;
+//             }
 
-            string result_;
-            result_.append((char*) result);
+//             string result_;
+//             result_.append((char*) result);
 
-            return true;
-        }
-    } catch (exception &e) {
-        cout << "\nError pinging receiver: " << e.what() << "\n";
-        return false;
-    }
-    return false;
-}
+//             return true;
+//         }
+//     } catch (exception &e) {
+//         cout << "\nError pinging receiver: " << e.what() << "\n";
+//         return false;
+//     }
+//     return false;
+// }
 
+
+
+//SENDS MESSAGE TO SWITCH TO BINARY PROTOCOL
 void NVS::StartReading() {
     reading_status_ = true;
     
@@ -160,32 +232,8 @@ void NVS::StartReading() {
 
     sleep_msecs(1000);
 
-    //! FIXME Not switching to binary protocol?
-    if (!is_binr_) { // instance uses NMEA
-        SendMessage(setBINRMsgNMEA);
-        sleep_msecs(1000);
-        SendMessage(setBINRMsgBINR_);
-        SendMessage(setBINRMsgBINR__);
-    } else { // instance uses BINR
-        SendMessage(setBINRMsgBINR__);
-        sleep_msecs(100);
-        SendMessage(reqParamMsg);
-        SendMessage(reqVersionMsg);
-        SendMessage(reqTestMsg);
-    }
-    
-    // SendMessage(setBINRMsgNMEA);
-    // SendMessage(reqSilenceMsg);
-    // SendMessage(setBINRMsgBINR);
-    // SendMessage(setBINRMsgBINR_);
-    // SendMessage(setBINRMsgBINR__);
-    // SendMessage("$GPGPQ,ALVER*31\r\n");
-
-    // sleep_msecs(1000);
-    // SendMessage(reqParamMsg);
-    // SendMessage(reqVersionMsg);
-    // SendMessage(reqTestMsg);
 }
+//SENDS BINARY MESSAGES
 
 void NVS::StopReading() {
     reading_status_ = false;
@@ -199,124 +247,274 @@ void NVS::ReadSerialPort() {
     // continuously read data from serial port
     while (reading_status_) {
         try{
-            len = serial_port_->read(new_data_buffer, MAX_NOUT_SIZE);
+            len = serial_port_usb->read (new_data_buffer, MAX_NOUT_SIZE);
         } catch (exception &e) { // most likely unplugged
             cout << "Error reading serial port:\n\t" << e.what() << "\n";
             Disconnect();
             return;
         }
-        // send if content
-        if (len != 0) {
-            // Timestamp the read
-            read_timestamp_ = time_handler_();
-            // cout << "Read Timestamp: " << read_timestamp_;
-            // add data to the buffer to be parsed
-            BufferIncomingData(new_data_buffer, len);
-        } else {
-            cout << "No content received\n";
-            sleep_msecs(500);
-        }
+        // Timestamp the read
+        read_timestamp_ = time_handler_();
+        // cout << "Read Timestamp: " << read_timestamp_;
+        // add data to the buffer to be parsed
+        BufferIncomingData(new_data_buffer, len);
     }
 }
 
-void NVS::WaitForCommand() {
-    wait_for_command_ = true;
-    string command;
-    while (wait_for_command_) {
-        cin >> command;
-        if (!command.empty())
-            ParseCommand(command);
-        sleep_msecs(10);
+// void NVS::WaitForCommand() {
+//     wait_for_command_ = true;
+//     string command;
+//     while (wait_for_command_) {
+//         cin >> command;
+//         if (!command.empty())
+//             ParseCommand(command);
+//         sleep_msecs(10);
+//     }
+// }
+
+
+bool NVS::Reboot(uint8_t reboot_type) {
+        //Define Imputs in Main
+        size_t length= 10; //Length of message 
+    
+        CntReboot message; 
+        message.header.dle=NVS_DLE_BYTE; 
+        message.header.message_id = NVS_CNT_RBT; 
+        message.constant = 0x00; 
+        message.constant2 = 0x01; 
+        message.constant3 = 0x21; 
+        message.constant4 = 0x01; 
+        message.constant5 = 0x00; 
+        message.reboot_type = reboot_type; // With erasing 0x00 without erasing 0x01
+        message.footer.dle = NVS_DLE_BYTE;
+        message.footer.etx = NVS_ETX_BYTE;
+
+        unsigned char* msg_ptr = (unsigned char*) &message;
+        return serial_port_usb->write(msg_ptr, sizeof(message)) == sizeof(message);
+}
+//FIX uint32_t?????
+bool NVS::SetPortStatus(uint8_t port_no, uint32_t ex_speed, uint8_t protocol) {
+    size_t length = 10; 
+    CntPort_Status message; 
+    message.header.dle=NVS_DLE_BYTE; 
+    message.header.message_id = NVS_CNT_SET; 
+    message.port_no= port_no; 
+    message.ex_speed= ex_speed; 
+    message.protocol= protocol; 
+    message.footer.dle = NVS_DLE_BYTE;
+    message.footer.etx = NVS_ETX_BYTE;
+    
+
+    unsigned char* msg_ptr = (unsigned char*) &message;
+    return serial_port_usb->write(msg_ptr, sizeof(message)) == sizeof(message);
+
+
+}
+
+bool NVS::RequestCurrent() {
+    Current_Status message; 
+    message.header.dle=NVS_DLE_BYTE; 
+    message.header.message_id = NVS_CNT_SET; 
+    message.footer.dle = NVS_DLE_BYTE;
+    message.footer.etx = NVS_ETX_BYTE;
+    unsigned char* msg_ptr = (unsigned char*) &message;
+    return serial_port_usb->write(msg_ptr, sizeof(message)) == sizeof(message);
+
+}
+
+bool NVS::RequestCourse(uint8_t output_rate){
+    CntCourse_Ang_Speed message; 
+    message.header.dle=NVS_DLE_BYTE; 
+    message.header.message_id = NVS_CNT_CAAS;
+    message.output_rate= output_rate; 
+    message.footer.dle = NVS_DLE_BYTE;
+    message.footer.etx = NVS_ETX_BYTE;
+    unsigned char* msg_ptr = (unsigned char*) &message;
+    return serial_port_usb->write(msg_ptr, sizeof(message)) == sizeof(message);
+}
+//FIX Request and loading should be different because this is only a function for 
+//loading 1 sats ephem data, not all sats
+bool NVS::RequestEphemeris(uint8_t sat_system, uint8_t sat_number){
+    CntSV_Ephemeris message; 
+    message.header.dle=NVS_DLE_BYTE; 
+    message.header.message_id = NVS_CNT_SVEPHEM;
+    message.sat_system= sat_system; 
+    message.sat_number= sat_number; 
+    message.footer.dle = NVS_DLE_BYTE;
+    message.footer.etx = NVS_ETX_BYTE;
+    unsigned char* msg_ptr = (unsigned char*) &message;
+    return serial_port_usb->write(msg_ptr, sizeof(message)) == sizeof(message);
+}
+
+bool NVS::RequestAlmanac(uint8_t sat_system, uint8_t sat_number){
+    CntAlmanac message; 
+    message.header.dle=NVS_DLE_BYTE; 
+    message.header.message_id = NVS_CNT_ALMAN;
+    message.sat_system= sat_system; 
+    message.sat_number= sat_number; 
+    message.footer.dle = NVS_DLE_BYTE;
+    message.footer.etx = NVS_ETX_BYTE;
+    unsigned char* msg_ptr = (unsigned char*) &message;
+    return serial_port_usb->write(msg_ptr, sizeof(message)) == sizeof(message);
+}
+
+bool NVS::RequestNumandDop(uint8_t output_rate) {
+    CntNumber_Sat_Used message; 
+    message.header.dle=NVS_DLE_BYTE; 
+    message.header.message_id = NVS_CNT_NUMSATS;
+    message.output_rate= output_rate;
+    message.footer.dle = NVS_DLE_BYTE;
+    message.footer.etx = NVS_ETX_BYTE;
+    unsigned char* msg_ptr = (unsigned char*) &message;
+    return serial_port_usb->write(msg_ptr, sizeof(message)) == sizeof(message);
+}
+
+bool NVS::RequestPVT(uint8_t output_rate) {
+    CntPVT message; 
+    message.header.dle=NVS_DLE_BYTE; 
+    message.header.message_id = NVS_CNT_PVT;
+    message.output_rate= output_rate;
+    message.footer.dle = NVS_DLE_BYTE;
+    message.footer.etx = NVS_ETX_BYTE;
+    unsigned char* msg_ptr = (unsigned char*) &message;
+    return serial_port_usb->write(msg_ptr, sizeof(message)) == sizeof(message);
+}
+
+bool NVS::RequestRaw(uint8_t meas_interval){
+    CntRaw_Data message; 
+    message.header.dle=NVS_DLE_BYTE; 
+    message.header.message_id = 0xf4;
+    message.meas_interval= meas_interval;
+    message.footer.dle = NVS_DLE_BYTE;
+    message.footer.etx = NVS_ETX_BYTE;
+    unsigned char* msg_ptr = (unsigned char*) &message;
+    return serial_port_usb->write(msg_ptr, sizeof(message)) == sizeof(message);
+}
+
+
+
+
+
+void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
+    //cout << length << endl;
+    //cout << 0 << ": " << dec << (int)msg[0] << endl;
+    // add incoming data to buffer
+    int a = 1; 
+    std::cout << "Contents of msg: " << std::endl;
+    printHex(msg,length);
+    uint8_t first_byte;
+    uint8_t dle_byte; 
+
+    try {
+
+        for (unsigned int i = 0; i < length; i++) {
+            //cout << i << ": " << hex << (int)msg[i] << dec << endl;
+            // make sure buffer_index_ is not larger than buffer
+            if (buffer_index_ >= MAX_NOUT_SIZE) { // If
+                buffer_index_ = 0;
+                
+                //log_warning_("Overflowed receiver buffer. See nvs.cpp BufferIncomingData()");
+            }
+            //cout << "buffer_index_ = " << buffer_index_ << endl;
+
+            if (buffer_index_ == 0) {   // looking for beginning of message
+                if (msg[i] == NVS_DLE_BYTE) {  // beginning of msg found - add to buffer
+                    cout << "got first bit" << endl;
+                    //data_buffer_[buffer_index_++] = msg[i];
+                    data_buffer_[buffer_index_++] = msg[i];
+                }   // end if (msg[i])
+            } // end if (buffer_index_==0)
+
+            else if (buffer_index_ == 1) {  // 2nd character of message is Message ID
+                //data_buffer_[buffer_index_++] = msg[i];
+                data_buffer_[buffer_index_++] = msg[i];
+                msgID = msg[i];
+               
+                //printHex(msgID,int a=1);
+                //printHex(msgID,a);
+
+            }   // end else if (buffer_index_==1)
+
+            else if (msg[i] == NVS_DLE_BYTE) {
+                    data_buffer_[buffer_index_++] = msg[i];
+                    //data_buffer_[buffer_index_++] = msg[i];
+                   
+                    //printHex(dle_byte,a);
+
+                } // end if ((msg[i+1] == NVS_SYNC_BYTE)
+            // end if ((msg[i] == NVS_SYNC_BYTE)
+
+            // else if (msg[i] == NVS_CRC_BYTE) { // If check sum field is present in message
+            //     // Following 2 bytes are the checksum
+            //     std::cout << "Message has a checksum." << std::endl; 
+            //     data_buffer_[buffer_index_++] = msg[i];
+            // } 
+
+            else if (msg[i] == NVS_ETX_BYTE) { // End of message byte
+                //data_buffer_[buffer_index_++] = msg[i];
+                std::cout << "End of message byte: " ;
+                data_buffer_[buffer_index_++] = msg[i];
+                ParseLog(data_buffer_, msgID,buffer_index_);
+                // reset counter
+                buffer_index_ = 0;
+                cout << "Message Done." << std::endl;
+
+            }  // end else if
+
+            else {  // add data to buffer
+                data_buffer_[buffer_index_++] = msg[i];
+               
+                
+                
+            }
+           }// end for
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in NVS::BufferIncomingData(): " << e.what();
+        //log_error_(output.str());
     }
 }
 
 
-void NVS::BufferIncomingData(uint8_t* new_data, size_t len) {
-    cout << "BufferIncomingData\n";
-    // ! Assume that each new message begins right after the old one ends
-    //      no stray bytes
-    //  TODO Check for overflow better
-    if (len > MAX_NOUT_SIZE) {
-        cout << "NVS Buffer Overflow. Dumping new data.\n";
-        return;
-    }
 
-    if (len == 0)
-        cout << "no data received\n";
-    cout << "new_data: " << new_data << "\n";
-
-    // TODO stop if buffer full
-    // TODO pass if new_data empty
-    // TODO compare checksums?
-
-    header_indices_ = get_indices(new_data, header_byte_);
-    footer_indices_ = get_indices(new_data, footer_byte_);
-
-    printf("# header indices: %i\n", int(header_indices_.size()));
-    printf("# footer indices: %i\n", int(footer_indices_.size()));
-
-    if (header_indices_.size() < 2 || footer_indices_.size() < 1) {
-        cout << "not given enough indices\n";
-        return;
-    }
-
-    // deal with the front bytes
-    if (header_indices_.front() == (footer_indices_.front()+1)) { // got the tail end of a message - new_data begins with 0x10 0x03
-        header_indices_.pop_front(); // get rid of the first from each
-        footer_indices_.pop_front();
-    } else if (footer_indices_.front() < header_indices_.front())  // got the tail end of a message - new_data begins with 0x03
-        footer_indices_.pop_front(); // get rid of the first footer
-
-    if (header_indices_.size() < 2 || footer_indices_.size() < 1) {
-        cout << "not enough there after trimming front\n";
-        return;
-    }
-
-    // deal with the back bytes
-    if (header_indices_.back() == (footer_indices_.back()+1)) { // new_data cuts off in the middle of a payload
-        header_indices_.pop_back(); // get rid of last header
-    } else if (header_indices_.back() == len) { // newd_data cuts of in the middle of a footer -- last byte is 0x10
-        header_indices_.pop_back(); // get rid of last footer 0x10 and the last header 0x10
-        header_indices_.pop_back();
-    }
-
-    // TODO check that we have a sane number of both
-    cout << "Done checking back\n";
-
-    while(header_indices_.size() > 1) {
-        // get the next payload bounds
-        payload_indices_[0] = header_indices_[0];
-        payload_indices_[1] = header_indices_[1];
+void NVS::ParseLog(unsigned char* data_buffer_, unsigned short msgID, size_t buffer_index_){
+    switch(msgID){
         
-        // put the payload in the buffer
-        for (int i = payload_indices_[0]; i != payload_indices_[1]; i++)
-            msg_buffer_[i-payload_indices_[0]] = new_data[i];
+        case RSP_SET:
+        // SavePortSettings(data_buffer_)
+        cout << "Reached Parse Log";
+        RspPort_Sts cur_port_settings; 
+        payload_length = buffer_index_; 
+        memcpy(&cur_port_settings, data_buffer_,payload_length);
+        if (port_settings_callback_)
+            port_settings_callback_(cur_port_settings,read_timestamp_); 
+        break; 
 
-        // have it parsed
-        DelegateParsing();
+        case NVS_RAW_RSP:
+        RawData raw_data; 
+        payload_length=buffer_index_; 
+        cout << "Reached Parse Log";
+        memcpy(&raw_data, data_buffer_, payload_length);
+        if (raw_data_callback_)
+            raw_data_callback_(raw_data, read_timestamp_); 
+        break; 
 
-        // clean up
-        header_indices_.pop_front();
-        header_indices_.pop_front();
-        footer_indices_.pop_front();
-        delete msg_buffer_;
-    }
-    cout << "Done sending to DelegateParsing\n";
+        case RSP_SOFTW:
+        cout << "Reached Parse Log";
+        RspSoftware software_version;
+        payload_length= buffer_index_; 
+        memcpy(&software_version, data_buffer_, payload_length);
+        if (software_callback_)
+            software_callback_(software_version, read_timestamp_);
+        break; 
+
+    } 
 }
 
-void NVS::DelegateParsing() {
-    cout << "Delegate Parsing\n";
-    cout << "msg_buffer_: " << msg_buffer_ << "\n";
-}
+// bool NVS::SavePortSettings(unsigned char* data_buffer_){
 
-
-/*
- *  Parsing Functions for Specific Messages
- */
-
-/*
- *  User input
- */
+   
+// }
 
 void NVS::ParseCommand(string cmd) {
     // Toggle log data display
@@ -349,10 +547,21 @@ void NVS::ParseCommand(string cmd) {
 /*
  *  Send Functions
  */
-bool NVS::SendMessage(string msg) {
-    size_t len = msg.size();
-    size_t bytes_written = serial_port_->write(msg);
-    if (bytes_written == len)
+// bool NVS::SendMessage(std::string msg) {
+//     size_t len = msg.size();
+//     size_t bytes_written = serial_port_usb->write(msg);
+//     if (bytes_written == len)
+//         return true;
+//     else {
+//         cout << "Full message was not sent over serial port\n";
+//         return false;
+//     }
+// }
+
+bool NVS::SendMessage(uint8_t* msg, size_t length) {
+    cout << "SENDMESSAGE()\n";
+    size_t bytes_written = serial_port_usb->write(msg, length);
+    if (bytes_written == length)
         return true;
     else {
         cout << "Full message was not sent over serial port\n";
@@ -360,25 +569,16 @@ bool NVS::SendMessage(string msg) {
     }
 }
 
-bool NVS::SendMessage(const uint8_t* msg) {
-    size_t len = sizeof(msg);
-    size_t bytes_written = serial_port_->write(msg, len);
-    if (bytes_written == len)
-        return true;
-    else {
-        cout << "Full message was not sent over serial port\n";
-        return false;
-    }
-}
-
-bool NVS::SendMessage(uint8_t* msg) {
-    cout << "Fill me in\n";
-    return false;
-}
 
 
-bool NVS::SendMessage(const vector< uint8_t > & msg) {
-    cout << "Fill me in\n";
-    return true;
-}
+// bool NVS::SendMessage(uint8_t* msg) {
+//     cout << "Fill me in\n";
+//     return false;
+// }
+
+
+// bool NVS::SendMessage(const vector< uint8_t > & msg) {
+//     cout << "Fill me in\n";
+//     return true;
+// }
 
