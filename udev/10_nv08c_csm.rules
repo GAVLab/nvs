@@ -5,3 +5,6 @@ SUBSYSTEM=="tty", ATTRS{bmAttributes}=="a0", ATTRS{idVendor}=="2478", ATTRS{vers
 # USB Port
 # may need to find attributes that do not change with the adapter used
 SUBSYSTEM=="tty", ATTRS{bmAttributes}=="a0", ATTRS{idVendor}=="0403", ATTRS{version}==" 2.00", ATTRS{bMaxPower}==" 90mA", NAME="nvs_usb"
+
+
+#Both USB and COM PORTS should be connected, make sure to connect com port second
