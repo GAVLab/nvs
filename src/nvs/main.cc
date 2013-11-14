@@ -37,12 +37,12 @@ int main (int argc, char *argv[]) {
     
 
 
-    //uint8_t meas_interval=0x14;
+    uint8_t meas_interval=0x14;
     
-    //receiver->RequestRaw(meas_interval); 
+    receiver->RequestRaw(meas_interval); 
 
 
-/
+
 
 
     while(1);
