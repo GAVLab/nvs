@@ -31,52 +31,51 @@ inline void printHex(uint8_t *data, int length) {
 inline void DefaultPortSettingsCallback(RspPort_Sts port_settings,
         double time_stamp) {
     std::cout << "RSP_SET:";
-    cout << port_settings.header.dle; 
-    cout << port_settings.header.message_id; 
-    cout << port_settings.port_no; 
-    cout << port_settings.baud_rate; 
-    cout << port_settings.protocol; 
-    cout << port_settings.footer.dle; 
-    cout << port_settings.footer.etx; 
+    cout << "Header" << port_settings.header.dle <<"\n"; 
+    cout <<  "Message ID:" << port_settings.header.message_id <<"\n"; 
+    cout << "Port No." << port_settings.port_no <<"\n"; 
+    cout << "Port Settings" << port_settings.baud_rate <<"\n"; 
+    cout << "Protocol" << port_settings.protocol <<"\n"; 
+    cout << "Footer:" << port_settings.footer.dle ; 
+    cout << port_settings.footer.etx <<"\n"; 
 }
 
 inline void DefaultRawDataCallback(RawData raw_data, 
         double time_stamp){
-    std::cout << "RAW_DATA:";
-    cout << raw_data.header.dle; 
-    cout << raw_data.header.message_id; 
-    cout << raw_data.time; 
-    cout << raw_data.week_number; 
-    cout << raw_data.gps_utc_time_shift; 
-    cout << raw_data.rec_time_correction; 
-    cout << raw_data.signal_type; 
-    cout << raw_data.sat_number; 
-    cout << raw_data.sig_noise_ratio; 
-    cout << raw_data.carrier_phase; 
-    cout << raw_data.pseudo_range; 
-    cout << raw_data.doppler_freq; 
-    cout << raw_data.raw_data_flags; 
-    cout << raw_data.reserved; 
-    cout << raw_data.footer.dle; 
-    cout << raw_data.footer.etx;  
+    std::cout << "RAW_DATA:\n";
+    cout << hex << raw_data.header.dle; 
+    cout << "Message ID:" << hex << raw_data.header.message_id << "\n"; 
+    cout <<  "Data Time:" << raw_data.time << "   "; 
+    cout <<  "Data Week:" <<  hex << raw_data.week_number << "  "; 
+    cout <<   "Time Shift:" <<raw_data.gps_utc_time_shift; 
+    cout <<  "Time Correction:"  << raw_data.rec_time_correction << "\n"; 
+    cout <<  "Signal Type:" << raw_data.signal_type << "\n"; 
+    cout <<  "Sat Number:" <<  hex << raw_data.sat_number << "\n"; 
+    cout <<  "Signal To Noise:"  << raw_data.sig_noise_ratio << "\n"; 
+    cout <<  "Carrier Phase:"  << raw_data.carrier_phase << "\n"; 
+    cout <<  "Pseudo Range:"  << raw_data.pseudo_range << "\n"; 
+    cout <<  "Doppler:" << raw_data.doppler_freq << "\n"; 
+    cout <<  "Raw Data Flags:" << raw_data.raw_data_flags << "\n"; 
+    //cout << raw_data.reserved << "\n"; 
+    cout <<  "Footer:" << hex << raw_data.footer.dle  << raw_data.footer.etx << "\n";  
 
 }
 
 inline void DefaultSoftwareCallback(RspSoftware software_version, 
         double time_stamp){
     
-    std::cout << "RSP_SOFTW:";
-    cout << software_version.header.dle; 
-    cout << software_version.header.message_id; 
-    cout << software_version.num_channels; 
-    cout << software_version.version_identifier; 
-    cout << software_version.serial_num; 
-    cout << software_version.reserved; 
-    cout << software_version.reserved2; 
-    cout << software_version.reserved3; 
-    cout << software_version.reserved4; 
-    cout << software_version.footer.dle; 
-    cout << software_version.footer.etx;  
+    std::cout << "RSP_SOFTW:\n";
+    cout << "Header:" << hex << software_version.header.dle; 
+    cout << "ID:" << hex << software_version.header.message_id << "\n"; 
+    cout << "Number of Channels" << software_version.num_channels << "\n"; 
+    cout << "Version:" <<software_version.version_identifier << "\n"; 
+    cout << "Serial Number:" << software_version.serial_num << "\n"; 
+    // cout << software_version.reserved; 
+    // cout << software_version.reserved2; 
+    // cout << software_version.reserved3; 
+    // cout << software_version.reserved4; 
+    cout << "Footer:" << software_version.footer.dle; 
+    cout << software_version.footer.etx << "\n";  
 
 }
 
@@ -419,7 +418,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
 
             if (buffer_index_ == 0) {   // looking for beginning of message
                 if (msg[i] == NVS_DLE_BYTE) {  // beginning of msg found - add to buffer
-                    cout << "got first bit" << endl;
+                    //cout << "got first bit" << endl;
                     //data_buffer_[buffer_index_++] = msg[i];
                     data_buffer_[buffer_index_++] = msg[i];
                 }   // end if (msg[i])
@@ -429,9 +428,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
                 //data_buffer_[buffer_index_++] = msg[i];
                 data_buffer_[buffer_index_++] = msg[i];
                 msgID = msg[i];
-               
-                //printHex(msgID,int a=1);
-                //printHex(msgID,a);
+                //cout << "Message ID="<< hex << msgID <<"\n";
 
             }   // end else if (buffer_index_==1)
 
@@ -452,12 +449,12 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
 
             else if (msg[i] == NVS_ETX_BYTE) { // End of message byte
                 //data_buffer_[buffer_index_++] = msg[i];
-                std::cout << "End of message byte: " ;
+                //std::cout << "End of message byte: " ;
                 data_buffer_[buffer_index_++] = msg[i];
                 ParseLog(data_buffer_, msgID,buffer_index_);
                 // reset counter
                 buffer_index_ = 0;
-                cout << "Message Done." << std::endl;
+                //cout << "Message Done." << std::endl;
 
             }  // end else if
 
@@ -482,7 +479,7 @@ void NVS::ParseLog(unsigned char* data_buffer_, unsigned short msgID, size_t buf
         
         case RSP_SET:
         // SavePortSettings(data_buffer_)
-        cout << "Reached Parse Log";
+        cout << "Reached Parse Log\n";
         RspPort_Sts cur_port_settings; 
         payload_length = buffer_index_; 
         memcpy(&cur_port_settings, data_buffer_,payload_length);
@@ -492,20 +489,21 @@ void NVS::ParseLog(unsigned char* data_buffer_, unsigned short msgID, size_t buf
 
         case NVS_RAW_RSP:
         RawData raw_data; 
-        payload_length=buffer_index_; 
-        cout << "Reached Parse Log";
+        payload_length=buffer_index_;
+        cout << "Reached Parse Log\n";
         memcpy(&raw_data, data_buffer_, payload_length);
+
         if (raw_data_callback_)
             raw_data_callback_(raw_data, read_timestamp_); 
         break; 
 
         case RSP_SOFTW:
-        cout << "Reached Parse Log";
         RspSoftware software_version;
         payload_length= buffer_index_; 
         memcpy(&software_version, data_buffer_, payload_length);
         if (software_callback_)
             software_callback_(software_version, read_timestamp_);
+            cout << "Saved Software version";
         break; 
 
     } 

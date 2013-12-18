@@ -864,7 +864,8 @@ PACK(
 		double glonass_utc_time_shift;
 		int8_t rec_time_correction; 
 		uint8_t signal_type; 
-		uint8_t sat_number; 
+		uint8_t sat_number;
+		uint8_t carrier_num; 
 		uint8_t sig_noise_ratio;
 		double carrier_phase; 
 		double pseudo_range; 

@@ -41,7 +41,8 @@ int main (int argc, char *argv[]) {
     
     receiver->RequestRaw(meas_interval); 
 
-
+    // receiver->RequestCurrent();
+    
 
 
 
