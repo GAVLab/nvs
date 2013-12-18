@@ -43,20 +43,30 @@ inline void DefaultPortSettingsCallback(RspPort_Sts port_settings,
 inline void DefaultRawDataCallback(RawData raw_data, 
         double time_stamp){
     std::cout << "RAW_DATA:\n";
-    cout << hex << raw_data.header.dle; 
-    cout << "Message ID:" << hex << raw_data.header.message_id << "\n"; 
+    cout << "Header:" << raw_data.header.dle << "\n"; 
+    cout << "Message ID:" << raw_data.header.message_id << "\n"; 
     cout <<  "Data Time:" << raw_data.time << "   "; 
-    cout <<  "Data Week:" <<  hex << raw_data.week_number << "  "; 
-    cout <<   "Time Shift:" <<raw_data.gps_utc_time_shift; 
+    cout <<  "Data Week:" << raw_data.week_number << "  "; 
+    cout <<   "Time Shift:" << raw_data.gps_utc_time_shift; 
     cout <<  "Time Correction:"  << raw_data.rec_time_correction << "\n"; 
+    if (raw_data.signal_type== 0x01) {
+        cout << "Signal Type:GLONASS\n";
+    }
+    else if (raw_data.signal_type= 0x02) {
+        cout << "Signal Type: GPS \n";
+    }
+    else if (raw_data.signal_type= 0x04) {
+        cout << "Signal Type: SBAS \n";
+    }
     cout <<  "Signal Type:" << raw_data.signal_type << "\n"; 
-    cout <<  "Sat Number:" <<  hex << raw_data.sat_number << "\n"; 
+    cout <<  "Sat Number:" << raw_data.sat_number << "\n"; 
+    cout <<  "Carrier Number (for GLONASS)" << raw_data.carrier_num << "\n";
     cout <<  "Signal To Noise:"  << raw_data.sig_noise_ratio << "\n"; 
     cout <<  "Carrier Phase:"  << raw_data.carrier_phase << "\n"; 
     cout <<  "Pseudo Range:"  << raw_data.pseudo_range << "\n"; 
     cout <<  "Doppler:" << raw_data.doppler_freq << "\n"; 
     cout <<  "Raw Data Flags:" << raw_data.raw_data_flags << "\n"; 
-    //cout << raw_data.reserved << "\n"; 
+    // cout << "Reserved" << raw_data.reserved << "\n"; 
     cout <<  "Footer:" << hex << raw_data.footer.dle  << raw_data.footer.etx << "\n";  
 
 }
@@ -418,7 +428,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
 
             if (buffer_index_ == 0) {   // looking for beginning of message
                 if (msg[i] == NVS_DLE_BYTE) {  // beginning of msg found - add to buffer
-                    //cout << "got first bit" << endl;
+                    cout << "Found Start of Message";
                     //data_buffer_[buffer_index_++] = msg[i];
                     data_buffer_[buffer_index_++] = msg[i];
                 }   // end if (msg[i])
@@ -428,12 +438,17 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
                 //data_buffer_[buffer_index_++] = msg[i];
                 data_buffer_[buffer_index_++] = msg[i];
                 msgID = msg[i];
-                //cout << "Message ID="<< hex << msgID <<"\n";
+                cout << "Message ID="<< hex << msgID <<"\n";
 
             }   // end else if (buffer_index_==1)
 
-            else if (msg[i] == NVS_DLE_BYTE) {
+            else if (msg[i] == NVS_DLE_BYTE && msg[i+1] == NVS_ETX_BYTE) {
                     data_buffer_[buffer_index_++] = msg[i];
+                    data_buffer_[buffer_index_++] = msg[i+1];
+                    cout << "Found End of Message and Entering Parse Log";
+                    ParseLog(data_buffer_, msgID,buffer_index_);
+                    // reset counter
+                    buffer_index_ = 0;
                     //data_buffer_[buffer_index_++] = msg[i];
                    
                     //printHex(dle_byte,a);
@@ -447,16 +462,16 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
             //     data_buffer_[buffer_index_++] = msg[i];
             // } 
 
-            else if (msg[i] == NVS_ETX_BYTE) { // End of message byte
-                //data_buffer_[buffer_index_++] = msg[i];
-                //std::cout << "End of message byte: " ;
-                data_buffer_[buffer_index_++] = msg[i];
-                ParseLog(data_buffer_, msgID,buffer_index_);
-                // reset counter
-                buffer_index_ = 0;
-                //cout << "Message Done." << std::endl;
+            // else if (msg[i] == NVS_ETX_BYTE) { // End of message byte
+            //     //data_buffer_[buffer_index_++] = msg[i];
+            //     //std::cout << "End of message byte: " ;
+            //     data_buffer_[buffer_index_++] = msg[i];
+            //     ParseLog(data_buffer_, msgID,buffer_index_);
+            //     // reset counter
+            //     buffer_index_ = 0;
+            //     //cout << "Message Done." << std::endl;
 
-            }  // end else if
+            // }  // end else if
 
             else {  // add data to buffer
                 data_buffer_[buffer_index_++] = msg[i];
@@ -475,6 +490,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
 
 
 void NVS::ParseLog(unsigned char* data_buffer_, unsigned short msgID, size_t buffer_index_){
+    cout << "Entered Parse Log \n";
     switch(msgID){
         
         case RSP_SET:
@@ -487,12 +503,12 @@ void NVS::ParseLog(unsigned char* data_buffer_, unsigned short msgID, size_t buf
             port_settings_callback_(cur_port_settings,read_timestamp_); 
         break; 
 
-        case NVS_RAW_RSP:
+        case 0xf5:
         RawData raw_data; 
         payload_length=buffer_index_;
-        cout << "Reached Parse Log\n";
+        cout << "Payload Length:" << payload_length << "\n"; 
         memcpy(&raw_data, data_buffer_, payload_length);
-
+        cout << "Copied to memory \n"; 
         if (raw_data_callback_)
             raw_data_callback_(raw_data, read_timestamp_); 
         break; 
