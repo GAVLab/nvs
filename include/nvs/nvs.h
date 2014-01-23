@@ -82,7 +82,7 @@ public:
     bool display_log_data_;  // Whether to print data to terminal as it comes in
 
     bool is_binr_;
-
+    bool IsMessageId(uint8_t *id);
     void ParseLog(unsigned char* data_buffer_, unsigned short msgID, size_t buffer_index_);
 
 

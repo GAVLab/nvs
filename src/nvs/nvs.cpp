@@ -401,7 +401,162 @@ bool NVS::RequestRaw(uint8_t meas_interval){
 }
 
 
-
+bool NVS::IsMessageId(uint8_t *id) {
+    try {
+        switch(*id) {
+            case CNT_RBT:
+                return true;
+            case CNT_SET:
+                return true;
+            case RSP_SET:
+                return true;
+            case CNT_OPPARAM:
+                return true;
+            case RSP_OPPARAM:
+                return true;
+            case CNT_CANCEL:
+                return true;
+            case CNT_COOR:
+                return true;
+            case RSP_COOR:
+                return true;
+            case CNT_TEST:
+                return true;
+            case RSP_TEST:
+                return true;
+            case CNT_SATUSED:
+                return true;
+            case RSP_SATUSED:
+                return true;
+            case CNT_CAAS:
+                return true;
+            case RSP_CAAS:
+                return true;
+            case CNT_RECCHAN:
+                return true;
+            case RSP_RECCHAN:
+                return true;
+            case CNT_SVEPHEM:
+                return true;
+            case RSP_SVEPHEM:
+                return true;
+            case CNT_SOFTW:
+                return true;
+            case RSP_SOFTW:
+                return true;
+            case CNT_OPMOANT:
+                return true;
+            case RSP_OPMOANT:
+                return true;
+            case CNT_GPSTM:
+                return true;
+            case RSP_GPSTM:
+                return true;
+            case CNT_TMFREQ:
+                return true;
+            case RSP_TMFREQ:
+                return true;
+            case CNT_ALMAN:
+                return true;
+            case RSP_ALMAN:
+                return true;
+            case CNT_NUMSATS:
+                return true;
+            case RSP_NUMSATS:
+                return true;
+            case CNT_TMZONE:
+                return true;
+            case RSP_TMZONE:
+                return true;
+            case CNT_VISSAT:
+                return true;
+            case RSP_VISSAT:
+                return true;
+            case CNT_COMCHK:
+                return true;
+            case RSP_COMCHK:
+                return true;
+            case CNT_PVT:
+                return true;
+            case RSP_PVT:
+                return true;
+            case CNT_IONO:
+                return true;
+            case RSP_IONO:
+                return true;
+            case CNT_TMSCAL:
+                return true;
+            case RSP_TMSCAL:
+                return true;
+            case CNT_DOPRMS:
+                return true;
+            case RSP_DOPRMS:
+                return true;
+            case CNT_USEBLK:
+                return true;
+            case RSP_USEBLK:
+                return true;
+            case CNT_INFOCHN:
+                return true;
+            case RSP_INFOCHN:
+                return true;
+            case CNT_ATMOCOR:
+                return true;
+            case RSP_ATMOCOR:
+                return true;
+            case CNT_GDC:
+                return true;
+            case RSP_GDC:
+                return true;
+            case CNT_INSTCOOR:
+                return true;
+            case RSP_INSTCOOR:
+                return true;
+            case CNT_BINR:
+                return true;
+            case RSP_BINR:
+                return true;
+            case CNT_ADDPARAM:
+                return true;
+            case RSP_ADDPARAM:
+                return true;
+            case CNT_GLOTM:
+                return true;
+            case RSP_GLOTM:
+                return true;
+            case RAW_CNT:
+                return true;
+            case RAW_RSP:
+                return true;
+            case RAW_COOR:
+                return true;
+            case RAW_EPHEM:
+                return true;
+            case AID_CNT:
+                return true;
+            case AID_EPHEM:
+                return true;
+            case AID_ALMAN:
+                return true;
+            case AID_IONO:
+                return true;
+            case AID_TIME:
+                return true;
+            case AID_DIFF:
+                return true;
+            case AID_REF:
+                return true;
+            case AID_REFTM:
+                return true;
+        }
+        return false;
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in NVS::IsMessageId(): " << e.what();
+        // log_error_(output.str());
+        return false;
+    }
+}
 
 
 void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
@@ -427,22 +582,24 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
             //cout << "buffer_index_ = " << buffer_index_ << endl;
 
             if (buffer_index_ == 0) {   // looking for beginning of message
-                if (msg[i] == NVS_DLE_BYTE) {  // beginning of msg found - add to buffer
-                    cout << "Found Start of Message";
-                    //data_buffer_[buffer_index_++] = msg[i];
-                    data_buffer_[buffer_index_++] = msg[i];
+                if (msg[i] == NVS_DLE_BYTE) {  // DLE byte found
+                    if (msg[i+1] != NVS_ETX_BYTE) { // DLE byte is not the end message one
+                        if (IsMessageId(&msg[i+1])) { // DLE byte is the message start one
+                            cout << "Found Start of Message";
+                            data_buffer_[buffer_index_++] = msg[i];        
+                        }
+                    }
                 }   // end if (msg[i])
             } // end if (buffer_index_==0)
 
             else if (buffer_index_ == 1) {  // 2nd character of message is Message ID
-                //data_buffer_[buffer_index_++] = msg[i];
                 data_buffer_[buffer_index_++] = msg[i];
                 msgID = msg[i];
                 cout << "Message ID="<< hex << msgID <<"\n";
 
             }   // end else if (buffer_index_==1)
 
-            else if (msg[i] == NVS_DLE_BYTE && msg[i+1] == NVS_ETX_BYTE) {
+            else if ((msg[i] == NVS_DLE_BYTE) && (msg[i+1] == NVS_ETX_BYTE)) {
                     data_buffer_[buffer_index_++] = msg[i];
                     data_buffer_[buffer_index_++] = msg[i+1];
                     cout << "Found End of Message and Entering Parse Log";
@@ -453,33 +610,12 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
                    
                     //printHex(dle_byte,a);
 
-                } // end if ((msg[i+1] == NVS_SYNC_BYTE)
-            // end if ((msg[i] == NVS_SYNC_BYTE)
-
-            // else if (msg[i] == NVS_CRC_BYTE) { // If check sum field is present in message
-            //     // Following 2 bytes are the checksum
-            //     std::cout << "Message has a checksum." << std::endl; 
-            //     data_buffer_[buffer_index_++] = msg[i];
-            // } 
-
-            // else if (msg[i] == NVS_ETX_BYTE) { // End of message byte
-            //     //data_buffer_[buffer_index_++] = msg[i];
-            //     //std::cout << "End of message byte: " ;
-            //     data_buffer_[buffer_index_++] = msg[i];
-            //     ParseLog(data_buffer_, msgID,buffer_index_);
-            //     // reset counter
-            //     buffer_index_ = 0;
-            //     //cout << "Message Done." << std::endl;
-
-            // }  // end else if
-
+            } // end if ((msg[i+1] == NVS_SYNC_BYTE)
+            
             else {  // add data to buffer
                 data_buffer_[buffer_index_++] = msg[i];
-               
-                
-                
             }
-           }// end for
+        }// end for
     } catch (std::exception &e) {
         std::stringstream output;
         output << "Error in NVS::BufferIncomingData(): " << e.what();
