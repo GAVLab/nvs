@@ -27,13 +27,12 @@ int main (int argc, char *argv[]) {
     //receiver->WaitForCommand();
 
 
-    // uint8_t pvt[5];
+    // uint8_t pvt[4];
     // pvt[0]=0X10;
-    // pvt[1]=0x27;
-    // pvt[2]=0x01;  
-    // pvt[3]=0x10;
-    // pvt[4]=0x03; 
-    // bool result2 = receiver->SendMessage(&pvt[0],5);
+    // pvt[1]=0x0b;  
+    // pvt[2]=0x10;
+    // pvt[3]=0x03; 
+    // bool result2 = receiver->SendMessage(&pvt[0],4);
     
 
 

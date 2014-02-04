@@ -92,8 +92,8 @@ namespace nvs{
 	#define NVS_AID_REF  0x6a 
 	#define NVS_AID_REFTM  0x6b 
     
-    #define RSP_SET 0x50
-    #define RSP_SOFTW 0x70
+    // #define RSP_SET 0x50
+    // #define RSP_SOFTW 0x70
 
 
 // define macro to pack structures correctly with both GCC and MSVC compilers
@@ -871,7 +871,7 @@ PACK(
 		double pseudo_range; 
 		double doppler_freq; 
 		uint8_t raw_data_flags; 
-		// uint8_t reserved; 
+		uint8_t reserved; 
 		NVSFooter footer; 
 	});
 
@@ -1047,7 +1047,7 @@ enum Message_ID{
 	
 	CNT_RBT= 0x01,
 	CNT_SET= 0x0b, 
-	// RSP_SET= 80,
+	RSP_SET= 0x50,
 	CNT_OPPARAM= 0x0d, 
 	RSP_OPPARAM= 0x51, 
 	CNT_CANCEL= 0x0e, 
@@ -1064,7 +1064,7 @@ enum Message_ID{
 	CNT_SVEPHEM= 0x19, 
 	RSP_SVEPHEM= 0x49, 
 	CNT_SOFTW= 0x1b, 
-	// RSP_SOFTW= 112, 
+	RSP_SOFTW= 0x70, 
 	CNT_OPMOANT= 0x1d, 
 	RSP_OPMOANT= 0x73, 
 	CNT_GPSTM=0x1e, 
@@ -1106,7 +1106,7 @@ enum Message_ID{
 	CNT_GLOTM= 0xdb, 
 	RSP_GLOTM= 0xeb, 
 	RAW_CNT= 0xf4, 
-	RAW_RSP= 245, 
+	RAW_RSP= 0xf5, 
 	RAW_COOR= 0xf6, 
 	RAW_EPHEM= 0xf7,
 	AID_CNT= 0x6f, 

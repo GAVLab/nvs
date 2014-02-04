@@ -66,7 +66,7 @@ inline void DefaultRawDataCallback(RawData raw_data,
     cout <<  "Pseudo Range:"  << raw_data.pseudo_range << "\n"; 
     cout <<  "Doppler:" << raw_data.doppler_freq << "\n"; 
     cout <<  "Raw Data Flags:" << raw_data.raw_data_flags << "\n"; 
-    // cout << "Reserved" << raw_data.reserved << "\n"; 
+    cout << "Reserved" << raw_data.reserved << "\n"; 
     cout <<  "Footer:" << hex << raw_data.footer.dle  << raw_data.footer.etx << "\n";  
 
 }
@@ -603,7 +603,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
                     data_buffer_[buffer_index_++] = msg[i];
                     data_buffer_[buffer_index_++] = msg[i+1];
                     cout << "Found End of Message and Entering Parse Log";
-                    ParseLog(data_buffer_, msgID,buffer_index_);
+                    ParseLog(data_buffer_, &msgID,buffer_index_);
                     // reset counter
                     buffer_index_ = 0;
                     //data_buffer_[buffer_index_++] = msg[i];
@@ -625,9 +625,9 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
 
 
 
-void NVS::ParseLog(unsigned char* data_buffer_, unsigned short msgID, size_t buffer_index_){
+void NVS::ParseLog(unsigned char* data_buffer_, uint8_t *id, size_t buffer_index_){
     cout << "Entered Parse Log \n";
-    switch(msgID){
+    switch(*id){
         
         case RSP_SET:
         // SavePortSettings(data_buffer_)
@@ -639,7 +639,8 @@ void NVS::ParseLog(unsigned char* data_buffer_, unsigned short msgID, size_t buf
             port_settings_callback_(cur_port_settings,read_timestamp_); 
         break; 
 
-        case 0xf5:
+        case RAW_RSP:
+        cout << "\nCase Raw Rsp:\n";
         RawData raw_data; 
         payload_length=buffer_index_;
         cout << "Payload Length:" << payload_length << "\n"; 
@@ -655,8 +656,27 @@ void NVS::ParseLog(unsigned char* data_buffer_, unsigned short msgID, size_t buf
         memcpy(&software_version, data_buffer_, payload_length);
         if (software_callback_)
             software_callback_(software_version, read_timestamp_);
-            cout << "Saved Software version";
+            cout << "Saved Software version\n";
         break; 
+
+        case RSP_IONO:
+        cout << "\nIonosphere Strtucture Incomplete, Will Not Save\n";
+        break; 
+
+        case RSP_TMSCAL:
+        cout << "\nTime Scale Strtucture Incomplete, Will Not Save\n";
+        break; 
+
+        case RAW_COOR:
+        cout << "\nCoordniate Strtucture Incomplete, Will Not Save\n";
+        break;
+
+        case RAW_EPHEM:
+        cout << "\nEphemeris Strtucture Incomplete, Will Not Save\n";
+        break;
+
+
+
 
     } 
 }
