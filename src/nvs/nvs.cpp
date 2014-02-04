@@ -585,7 +585,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
                 if (msg[i] == NVS_DLE_BYTE) {  // DLE byte found
                     if (msg[i+1] != NVS_ETX_BYTE) { // DLE byte is not the end message one
                         if (IsMessageId(&msg[i+1])) { // DLE byte is the message start one
-                            cout << "Found Start of Message";
+                            cout << "Found Start of Message\n";
                             data_buffer_[buffer_index_++] = msg[i];        
                         }
                     }
@@ -602,8 +602,8 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
             else if ((msg[i] == NVS_DLE_BYTE) && (msg[i+1] == NVS_ETX_BYTE)) {
                     data_buffer_[buffer_index_++] = msg[i];
                     data_buffer_[buffer_index_++] = msg[i+1];
-                    cout << "Found End of Message and Entering Parse Log";
-                    ParseLog(data_buffer_, &msgID,buffer_index_);
+                    cout << "Found End of Message and Entering Parse Log\n";
+                    ParseLog(data_buffer_, msgID,buffer_index_);
                     // reset counter
                     buffer_index_ = 0;
                     //data_buffer_[buffer_index_++] = msg[i];
@@ -625,9 +625,9 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
 
 
 
-void NVS::ParseLog(unsigned char* data_buffer_, uint8_t *id, size_t buffer_index_){
+void NVS::ParseLog(unsigned char* data_buffer_, unsigned short id, size_t buffer_index_){
     cout << "Entered Parse Log \n";
-    switch(*id){
+    switch(id){
         
         case RSP_SET:
         // SavePortSettings(data_buffer_)
