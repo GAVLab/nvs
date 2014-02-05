@@ -675,8 +675,9 @@ void NVS::ParseLog(unsigned char* data_buffer_, unsigned short id, size_t buffer
         cout << "\nEphemeris Strtucture Incomplete, Will Not Save\n";
         break;
 
-
-
+        case RAW_CNT:
+        cout << "\nRAW_CNT case reached in ParseLog().";
+        break;
 
     } 
 }
