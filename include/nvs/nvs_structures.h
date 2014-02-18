@@ -95,6 +95,8 @@ namespace nvs{
     // #define RSP_SET 0x50
     // #define RSP_SOFTW 0x70
 
+#define NVS_HEADER_LENGTH 2 // [bytes]
+#define NVS_FOOTER_LENGTH 2 // [bytes]
 
 // define macro to pack structures correctly with both GCC and MSVC compilers
 #ifdef _MSC_VER // using MSVC
@@ -855,14 +857,9 @@ PACK(
 
 //Raw Data Messages
 
+//! Raw Data (0xF5)
 PACK(
-	struct RawData{
-		NVSHeader header;
-		double time;
-		uint16_t week_number; 
-		double gps_utc_time_shift;
-		double glonass_utc_time_shift;
-		int8_t rec_time_correction; 
+	struct RawChannelMeasurements{
 		uint8_t signal_type; 
 		uint8_t sat_number;
 		uint8_t carrier_num; 
@@ -871,7 +868,17 @@ PACK(
 		double pseudo_range; 
 		double doppler_freq; 
 		uint8_t raw_data_flags; 
-		uint8_t reserved; 
+		uint8_t reserved;
+	});
+PACK(
+	struct RawData{
+		NVSHeader header;
+		double time;
+		uint16_t week_number; 
+		double gps_utc_time_shift;
+		double glonass_utc_time_shift;
+		int8_t rec_time_correction; 
+ 		nvs::RawChannelMeasurements raw_channel_measurements[MAXCHAN];
 		NVSFooter footer; 
 	});
 

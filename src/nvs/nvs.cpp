@@ -49,24 +49,27 @@ inline void DefaultRawDataCallback(RawData raw_data,
     cout <<  "Data Week:" << raw_data.week_number << "  "; 
     cout <<   "Time Shift:" << raw_data.gps_utc_time_shift; 
     cout <<  "Time Correction:"  << raw_data.rec_time_correction << "\n"; 
-    if (raw_data.signal_type== 0x01) {
+
+    // TODO: if you want to see all data you'll need to loop through all reapeated fields,
+    // I just have it showing the first channel's data for now
+    if (raw_data.raw_channel_measurements[0].signal_type== 0x01) {
         cout << "Signal Type:GLONASS\n";
     }
-    else if (raw_data.signal_type= 0x02) {
+    else if (raw_data.raw_channel_measurements[0].signal_type= 0x02) {
         cout << "Signal Type: GPS \n";
     }
-    else if (raw_data.signal_type= 0x04) {
+    else if (raw_data.raw_channel_measurements[0].signal_type= 0x04) {
         cout << "Signal Type: SBAS \n";
     }
-    cout <<  "Signal Type:" << raw_data.signal_type << "\n"; 
-    cout <<  "Sat Number:" << raw_data.sat_number << "\n"; 
-    cout <<  "Carrier Number (for GLONASS)" << raw_data.carrier_num << "\n";
-    cout <<  "Signal To Noise:"  << raw_data.sig_noise_ratio << "\n"; 
-    cout <<  "Carrier Phase:"  << raw_data.carrier_phase << "\n"; 
-    cout <<  "Pseudo Range:"  << raw_data.pseudo_range << "\n"; 
-    cout <<  "Doppler:" << raw_data.doppler_freq << "\n"; 
-    cout <<  "Raw Data Flags:" << raw_data.raw_data_flags << "\n"; 
-    cout << "Reserved" << raw_data.reserved << "\n"; 
+    cout <<  "Signal Type:" << raw_data.raw_channel_measurements[0].signal_type << "\n"; 
+    cout <<  "Sat Number:" << raw_data.raw_channel_measurements[0].sat_number << "\n"; 
+    cout <<  "Carrier Number (for GLONASS)" << raw_data.raw_channel_measurements[0].carrier_num << "\n";
+    cout <<  "Signal To Noise:"  << raw_data.raw_channel_measurements[0].sig_noise_ratio << "\n"; 
+    cout <<  "Carrier Phase:"  << raw_data.raw_channel_measurements[0].carrier_phase << "\n"; 
+    cout <<  "Pseudo Range:"  << raw_data.raw_channel_measurements[0].pseudo_range << "\n"; 
+    cout <<  "Doppler:" << raw_data.raw_channel_measurements[0].doppler_freq << "\n"; 
+    cout <<  "Raw Data Flags:" << raw_data.raw_channel_measurements[0].raw_data_flags << "\n"; 
+    cout << "Reserved" << raw_data.raw_channel_measurements[0].reserved << "\n"; 
     cout <<  "Footer:" << hex << raw_data.footer.dle  << raw_data.footer.etx << "\n";  
 
 }
@@ -644,7 +647,11 @@ void NVS::ParseLog(unsigned char* data_buffer_, unsigned short id, size_t buffer
         RawData raw_data; 
         payload_length=buffer_index_;
         cout << "Payload Length:" << payload_length << "\n"; 
-        memcpy(&raw_data, data_buffer_, payload_length);
+        // Copy Beginning of message and repeated fields
+        memcpy(&raw_data, data_buffer_, payload_length-NVS_FOOTER_LENGTH);
+        // Copy footer 
+        memcpy(&raw_data.footer,data_buffer_+payload_length-NVS_FOOTER_LENGTH, NVS_FOOTER_LENGTH);
+
         cout << "Copied to memory \n"; 
         if (raw_data_callback_)
             raw_data_callback_(raw_data, read_timestamp_); 
