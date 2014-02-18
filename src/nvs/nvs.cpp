@@ -602,6 +602,14 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
 
             }   // end else if (buffer_index_==1)
 
+            else if ((msg[i] == NVS_DLE_BYTE) && (msg[i+1] == NVS_DLE_BYTE)) {
+                // A double DLE byte is transmitted if the value 0x10h occurs in the data field.
+                // This double DLE byte MUST be compressed into 1 byte before decoding!!
+                // See BINR Protocol specs, Sect 3.1 BINR Message Struct
+                //TODO: ABOVE
+                cout << "\nDOUBLE <DLE> BYTE PRESENT!!\n";
+
+            }
             else if ((msg[i] == NVS_DLE_BYTE) && (msg[i+1] == NVS_ETX_BYTE)) {
                     data_buffer_[buffer_index_++] = msg[i];
                     data_buffer_[buffer_index_++] = msg[i+1];
