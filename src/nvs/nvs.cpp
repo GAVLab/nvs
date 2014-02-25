@@ -530,6 +530,7 @@ bool NVS::IsMessageId(uint8_t *id) {
             case RAW_CNT:
                 return true;
             case RAW_RSP:
+            cout << "Compared Correctly!!!!!\n";
                 return true;
             case RAW_COOR:
                 return true;
@@ -608,6 +609,8 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
                 // See BINR Protocol specs, Sect 3.1 BINR Message Struct
                 //TODO: ABOVE
                 cout << "\nDOUBLE <DLE> BYTE PRESENT!!\n";
+                data_buffer_[buffer_index_++] = msg[i+1];
+                i++;    
 
             }
             else if ((msg[i] == NVS_DLE_BYTE) && (msg[i+1] == NVS_ETX_BYTE)) {
@@ -636,7 +639,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
 
 
 
-void NVS::ParseLog(unsigned char* data_buffer_, unsigned short id, size_t buffer_index_){
+void NVS::ParseLog(unsigned char* data_buffer_, short id, size_t buffer_index_){
     cout << "Entered Parse Log \n";
     switch(id){
         

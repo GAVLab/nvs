@@ -1113,7 +1113,7 @@ enum Message_ID{
 	CNT_GLOTM= 0xdb, 
 	RSP_GLOTM= 0xeb, 
 	RAW_CNT= 0xf4, 
-	RAW_RSP= 0xf5, 
+	RAW_RSP= 0xF5, 
 	RAW_COOR= 0xf6, 
 	RAW_EPHEM= 0xf7,
 	AID_CNT= 0x6f, 

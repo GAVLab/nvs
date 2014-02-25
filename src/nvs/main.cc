@@ -33,7 +33,10 @@ int main (int argc, char *argv[]) {
     // pvt[2]=0x10;
     // pvt[3]=0x03; 
     // bool result2 = receiver->SendMessage(&pvt[0],4);
+    // receiver->Reboot(0x00);
     
+
+
 
 
     uint8_t meas_interval=0x14;

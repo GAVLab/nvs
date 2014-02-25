@@ -83,7 +83,7 @@ public:
 
     bool is_binr_;
     bool IsMessageId(uint8_t *id);
-    void ParseLog(unsigned char* data_buffer_, unsigned short id, size_t buffer_index_);
+    void ParseLog(unsigned char* data_buffer_, short id, size_t buffer_index_);
 
 
     /*
@@ -174,7 +174,7 @@ private:
     size_t buffer_len_;                         // size of the data which hasn't been processed
     bool buffering_;                      // buffer not yet fully parsed
     int payload_indices_[2];                    // where message currently being parsed lies (begin/end) within income buffer
-    unsigned short msgID;
+    short msgID;
     uint8_t actual_data_[MAX_MSG_SIZE];
     unsigned short actual_message;
     size_t bytes_remaining_; 
