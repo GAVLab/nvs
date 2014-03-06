@@ -159,7 +159,6 @@ private:
 
     const static uint max_buffer_size_ = 5000;  
 
-    //const static uint8_t setCurrent = 0x10,0x0b, 0x02, 0x00,0xc2, 0x01, 0x00,0x04, 0x10, 0x03;
 
     /* 
      *  Incoming data buffering

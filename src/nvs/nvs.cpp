@@ -590,7 +590,8 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
                     if (msg[i+1] != NVS_ETX_BYTE) { // DLE byte is not the end message one
                         if (IsMessageId(&msg[i+1])) { // DLE byte is the message start one
                             cout << "Found Start of Message\n";
-                            data_buffer_[buffer_index_++] = msg[i];        
+                            data_buffer_[buffer_index_++] = msg[i]; 
+                            cout << "Message ID BEGINNING="<< hex << msgID <<"\n";       
                         }
                     }
                 }   // end if (msg[i])
@@ -599,7 +600,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
             else if (buffer_index_ == 1) {  // 2nd character of message is Message ID
                 data_buffer_[buffer_index_++] = msg[i];
                 msgID = msg[i];
-                cout << "Message ID="<< hex << msgID <<"\n";
+                cout << "Message ID-ID="<< hex << msgID <<"\n";
 
             }   // end else if (buffer_index_==1)
 
@@ -609,6 +610,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
                 // See BINR Protocol specs, Sect 3.1 BINR Message Struct
                 //TODO: ABOVE
                 cout << "\nDOUBLE <DLE> BYTE PRESENT!!\n";
+                cout << "Message ID-DOUBLE DLE:" << msgID << "\n"; 
                 data_buffer_[buffer_index_++] = msg[i+1];
                 i++;    
 
@@ -617,6 +619,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
                     data_buffer_[buffer_index_++] = msg[i];
                     data_buffer_[buffer_index_++] = msg[i+1];
                     cout << "Found End of Message and Entering Parse Log\n";
+                    cout << "Message ID-END:" << msgID << "\n"; 
                     ParseLog(data_buffer_, msgID,buffer_index_);
                     // reset counter
                     buffer_index_ = 0;
@@ -628,6 +631,8 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
             
             else {  // add data to buffer
                 data_buffer_[buffer_index_++] = msg[i];
+                cout << "Message ID=-ALL DATA"<< hex << msgID <<"\n";
+                cout << msg[i]; << "\n"
             }
         }// end for
     } catch (std::exception &e) {
@@ -641,6 +646,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
 
 void NVS::ParseLog(unsigned char* data_buffer_, short id, size_t buffer_index_){
     cout << "Entered Parse Log \n";
+    cout << "Message ID:" << id << "\n"; 
     switch(id){
         
         case RSP_SET:
@@ -696,6 +702,8 @@ void NVS::ParseLog(unsigned char* data_buffer_, short id, size_t buffer_index_){
         case RAW_CNT:
         cout << "\nRAW_CNT case reached in ParseLog().";
         break;
+        default:
+        printHex( data_buffer_, buffer_index_);
 
     } 
 }
