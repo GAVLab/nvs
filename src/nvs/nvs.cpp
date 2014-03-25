@@ -42,35 +42,42 @@ inline void DefaultPortSettingsCallback(RspPort_Sts port_settings,
 
 inline void DefaultRawDataCallback(RawData raw_data, 
         double time_stamp){
-    std::cout << "RAW_DATA:\n";
-    cout << "Header:" << raw_data.header.dle << "\n"; 
-    cout << "Message ID:" << raw_data.header.message_id << "\n"; 
-    cout <<  "Data Time:" << raw_data.time << "   "; 
-    cout <<  "Data Week:" << raw_data.week_number << "  "; 
-    cout <<   "Time Shift:" << raw_data.gps_utc_time_shift; 
-    cout <<  "Time Correction:"  << raw_data.rec_time_correction << "\n"; 
+    //std::cout << "RAW_DATA:\n";
+    // FOR TESTING
+    cout << raw_data.time << "\n \n";
+    for (unsigned int i = 0; i < 20; i++) {
+        cout << (double)raw_data.raw_channel_measurements[i].sat_number << "\t";
+        cout << raw_data.raw_channel_measurements[i].pseudo_range << "\n";
+}
+    cout << "\n";
+    //cout << "Header:" << raw_data.header.dle << "\n"; 
+    //cout << "Message ID:" << raw_data.header.message_id << "\n"; 
+    // cout <<  "Data Time:" << raw_data.time << "   "; 
+    // cout <<  "Data Week:" << raw_data.week_number << "  "; 
+    // cout <<   "Time Shift:" << raw_data.gps_utc_time_shift; 
+    // cout <<  "Time Correction:"  << raw_data.rec_time_correction << "\n"; 
 
     // TODO: if you want to see all data you'll need to loop through all reapeated fields,
     // I just have it showing the first channel's data for now
-    if (raw_data.raw_channel_measurements[0].signal_type== 0x01) {
-        cout << "Signal Type:GLONASS\n";
-    }
-    else if (raw_data.raw_channel_measurements[0].signal_type= 0x02) {
-        cout << "Signal Type: GPS \n";
-    }
-    else if (raw_data.raw_channel_measurements[0].signal_type= 0x04) {
-        cout << "Signal Type: SBAS \n";
-    }
-    cout <<  "Signal Type:" << raw_data.raw_channel_measurements[0].signal_type << "\n"; 
-    cout <<  "Sat Number:" << raw_data.raw_channel_measurements[0].sat_number << "\n"; 
-    cout <<  "Carrier Number (for GLONASS)" << raw_data.raw_channel_measurements[0].carrier_num << "\n";
-    cout <<  "Signal To Noise:"  << raw_data.raw_channel_measurements[0].sig_noise_ratio << "\n"; 
-    cout <<  "Carrier Phase:"  << raw_data.raw_channel_measurements[0].carrier_phase << "\n"; 
-    cout <<  "Pseudo Range:"  << raw_data.raw_channel_measurements[0].pseudo_range << "\n"; 
-    cout <<  "Doppler:" << raw_data.raw_channel_measurements[0].doppler_freq << "\n"; 
-    cout <<  "Raw Data Flags:" << raw_data.raw_channel_measurements[0].raw_data_flags << "\n"; 
-    cout << "Reserved" << raw_data.raw_channel_measurements[0].reserved << "\n"; 
-    cout <<  "Footer:" << hex << raw_data.footer.dle  << raw_data.footer.etx << "\n";  
+    // if (raw_data.raw_channel_measurements[0].signal_type== 0x01) {
+    //     cout << "Signal Type:GLONASS\n";
+    // }
+    // else if (raw_data.raw_channel_measurements[0].signal_type= 0x02) {
+    //     cout << "Signal Type: GPS \n";
+    // }
+    // else if (raw_data.raw_channel_measurements[0].signal_type= 0x04) {
+    //     cout << "Signal Type: SBAS \n";
+    // }
+    //cout <<  "Signal Type:" << raw_data.raw_channel_measurements[0].signal_type << "\n"; 
+    //cout <<  "Sat Number:" << (double)raw_data.raw_channel_measurements[0].sat_number << "\n"; 
+    //cout <<  "Carrier Number (for GLONASS)" << raw_data.raw_channel_measurements[0].carrier_num << "\n";
+    // cout <<  "Signal To Noise:"  << raw_data.raw_channel_measurements[0].sig_noise_ratio << "\n"; 
+    // cout <<  "Carrier Phase:"  << raw_data.raw_channel_measurements[0].carrier_phase << "\n"; 
+    //cout <<  "Pseudo Range:"  << raw_data.raw_channel_measurements[0].pseudo_range << "\n"; 
+    // cout <<  "Doppler:" << raw_data.raw_channel_measurements[0].doppler_freq << "\n"; 
+    // cout <<  "Raw Data Flags:" << raw_data.raw_channel_measurements[0].raw_data_flags << "\n"; 
+    // cout << "Reserved" << raw_data.raw_channel_measurements[0].reserved << "\n"; 
+    // cout <<  "Footer:" << hex << raw_data.footer.dle  << raw_data.footer.etx << "\n";  
 
 }
 
@@ -80,7 +87,7 @@ inline void DefaultSoftwareCallback(RspSoftware software_version,
     std::cout << "RSP_SOFTW:\n";
     cout << "Header:" << hex << software_version.header.dle; 
     cout << "ID:" << hex << software_version.header.message_id << "\n"; 
-    cout << "Number of Channels" << software_version.num_channels << "\n"; 
+    cout << "Number of Channels" << dec << software_version.num_channels << "\n"; 
     cout << "Version:" <<software_version.version_identifier << "\n"; 
     cout << "Serial Number:" << software_version.serial_num << "\n"; 
     // cout << software_version.reserved; 
@@ -90,6 +97,24 @@ inline void DefaultSoftwareCallback(RspSoftware software_version,
     cout << "Footer:" << software_version.footer.dle; 
     cout << software_version.footer.etx << "\n";  
 
+}
+
+inline void DefaultChannelCallback(RspRec_Chan_Info channel_info, 
+        double time_stamp) {
+    std::cout << "RSP_CHANNEL_INFO:\n";
+    cout << "Header:" << hex << channel_info.header.dle; 
+    cout << "ID:" << hex << channel_info.header.message_id << "\n"; 
+    cout << "Sat system" << dec << channel_info.sat_system << "\n"; 
+    cout << "Sat Number:" <<channel_info.sat_number << "\n"; 
+    cout << "Signal to noise ratio" << channel_info.sig_noise_ratio << "\n"; 
+    cout << "Channel Status"  << channel_info.channel_sts << "\n"; 
+    cout << "CHannel status:" <<channel_info.channel_sts2 << "\n"; 
+    // cout << software_version.reserved; 
+    // cout << software_version.reserved2; 
+    // cout << software_version.reserved3; 
+    // cout << software_version.reserved4; 
+    cout << "Footer:" << channel_info.footer.dle; 
+    cout << channel_info.footer.etx << "\n";  
 }
 
 
@@ -118,14 +143,14 @@ NVS::NVS() {
     display_log_data_ = false;
 
     is_binr_ = false;
-    msgID = 0; 
     buffer_index_ = 0;
-    bytes_remaining_ = false;
+
 
     //CallBacks
     port_settings_callback_=DefaultPortSettingsCallback; 
     raw_data_callback_ = DefaultRawDataCallback;
-    software_callback_=  DefaultSoftwareCallback; 
+    software_callback_=  DefaultSoftwareCallback;
+    channel_callback_= DefaultChannelCallback; 
 
 }
 
@@ -530,7 +555,7 @@ bool NVS::IsMessageId(uint8_t *id) {
             case RAW_CNT:
                 return true;
             case RAW_RSP:
-            cout << "Compared Correctly!!!!!\n";
+            //cout << "Compared Correctly!!!!!\n";
                 return true;
             case RAW_COOR:
                 return true;
@@ -566,12 +591,12 @@ bool NVS::IsMessageId(uint8_t *id) {
 void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
     //cout << length << endl;
     //cout << 0 << ": " << dec << (int)msg[0] << endl;
-    // add incoming data to buffer
-    int a = 1; 
-    std::cout << "Contents of msg: " << std::endl;
-    printHex(msg,length);
+    // add incoming data to buffer 
+    //std::cout << "Contents of msg: " << std::endl;
+    //printHex(msg,length);
     uint8_t first_byte;
     uint8_t dle_byte; 
+    uint8_t msgID;
 
     try {
 
@@ -580,6 +605,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
             // make sure buffer_index_ is not larger than buffer
             if (buffer_index_ >= MAX_NOUT_SIZE) { // If
                 buffer_index_ = 0;
+                cout << "Reached Max Size Limit \n";
                 
                 //log_warning_("Overflowed receiver buffer. See nvs.cpp BufferIncomingData()");
             }
@@ -589,9 +615,9 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
                 if (msg[i] == NVS_DLE_BYTE) {  // DLE byte found
                     if (msg[i+1] != NVS_ETX_BYTE) { // DLE byte is not the end message one
                         if (IsMessageId(&msg[i+1])) { // DLE byte is the message start one
-                            cout << "Found Start of Message\n";
+                            //cout << "Found Start of Message\n";
                             data_buffer_[buffer_index_++] = msg[i]; 
-                            cout << "Message ID BEGINNING="<< hex << msgID <<"\n";       
+                            // cout << "Message ID BEGINNING="<< hex << msgID << "\t i=" << i <<"\n";       
                         }
                     }
                 }   // end if (msg[i])
@@ -600,7 +626,7 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
             else if (buffer_index_ == 1) {  // 2nd character of message is Message ID
                 data_buffer_[buffer_index_++] = msg[i];
                 msgID = msg[i];
-                cout << "Message ID-ID="<< hex << msgID <<"\n";
+                // cout << "Message ID-ID="<< hex << msgID << "\t i=" << i << "\n";
 
             }   // end else if (buffer_index_==1)
 
@@ -609,8 +635,8 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
                 // This double DLE byte MUST be compressed into 1 byte before decoding!!
                 // See BINR Protocol specs, Sect 3.1 BINR Message Struct
                 //TODO: ABOVE
-                cout << "\nDOUBLE <DLE> BYTE PRESENT!!\n";
-                cout << "Message ID-DOUBLE DLE:" << msgID << "\n"; 
+                //cout << "\nDOUBLE <DLE> BYTE PRESENT!!\n";
+                // cout << "Message ID-DOUBLE DLE:" << msgID << "\t i=" << i << "\n"; 
                 data_buffer_[buffer_index_++] = msg[i+1];
                 i++;    
 
@@ -618,11 +644,13 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
             else if ((msg[i] == NVS_DLE_BYTE) && (msg[i+1] == NVS_ETX_BYTE)) {
                     data_buffer_[buffer_index_++] = msg[i];
                     data_buffer_[buffer_index_++] = msg[i+1];
-                    cout << "Found End of Message and Entering Parse Log\n";
-                    cout << "Message ID-END:" << msgID << "\n"; 
+                    // cout << "Found End of Message and Entering Parse Log\n";
+                    // cout << "Message ID-END:" << msgID << "\t i=" << i <<  "\n"; 
                     ParseLog(data_buffer_, msgID,buffer_index_);
                     // reset counter
                     buffer_index_ = 0;
+                    msgID = 0; 
+                    i++;
                     //data_buffer_[buffer_index_++] = msg[i];
                    
                     //printHex(dle_byte,a);
@@ -631,8 +659,8 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
             
             else {  // add data to buffer
                 data_buffer_[buffer_index_++] = msg[i];
-                cout << "Message ID=-ALL DATA"<< hex << msgID <<"\n";
-                cout << msg[i]; << "\n"
+                // cout << "Message ID=-ALL DATA"<< hex << msgID <<"\t";
+                // cout << msg[i] << "\t i=" << dec << i << hex <<  "\n";
             }
         }// end for
     } catch (std::exception &e) {
@@ -644,9 +672,10 @@ void NVS::BufferIncomingData(uint8_t *msg, size_t length) {
 
 
 
-void NVS::ParseLog(unsigned char* data_buffer_, short id, size_t buffer_index_){
-    cout << "Entered Parse Log \n";
-    cout << "Message ID:" << id << "\n"; 
+void NVS::ParseLog(unsigned char* data_buffer_, uint8_t id, size_t buffer_index_){
+    // cout << "Entered Parse Log \n";
+    // cout << "Message ID:" << id << "\n"; 
+    // printHex(data_buffer_, buffer_index_);
     switch(id){
         
         case RSP_SET:
@@ -660,16 +689,17 @@ void NVS::ParseLog(unsigned char* data_buffer_, short id, size_t buffer_index_){
         break; 
 
         case RAW_RSP:
-        cout << "\nCase Raw Rsp:\n";
+        //cout << "\nCase Raw Rsp:\n";
         RawData raw_data; 
         payload_length=buffer_index_;
-        cout << "Payload Length:" << payload_length << "\n"; 
+        //cout << "Payload Length:" << payload_length << "\n"; 
         // Copy Beginning of message and repeated fields
         memcpy(&raw_data, data_buffer_, payload_length-NVS_FOOTER_LENGTH);
         // Copy footer 
         memcpy(&raw_data.footer,data_buffer_+payload_length-NVS_FOOTER_LENGTH, NVS_FOOTER_LENGTH);
 
-        cout << "Copied to memory \n"; 
+
+        //cout << "Copied to memory \n"; 
         if (raw_data_callback_)
             raw_data_callback_(raw_data, read_timestamp_); 
         break; 
@@ -680,28 +710,37 @@ void NVS::ParseLog(unsigned char* data_buffer_, short id, size_t buffer_index_){
         memcpy(&software_version, data_buffer_, payload_length);
         if (software_callback_)
             software_callback_(software_version, read_timestamp_);
-            cout << "Saved Software version\n";
+            //cout << "Saved Software version\n";
         break; 
 
         case RSP_IONO:
-        cout << "\nIonosphere Strtucture Incomplete, Will Not Save\n";
+        //cout << "\nIonosphere Strtucture Incomplete, Will Not Save\n";
         break; 
 
         case RSP_TMSCAL:
-        cout << "\nTime Scale Strtucture Incomplete, Will Not Save\n";
+        //cout << "\nTime Scale Strtucture Incomplete, Will Not Save\n";
         break; 
 
         case RAW_COOR:
-        cout << "\nCoordniate Strtucture Incomplete, Will Not Save\n";
+        //cout << "\nCoordniate Strtucture Incomplete, Will Not Save\n";
         break;
 
         case RAW_EPHEM:
-        cout << "\nEphemeris Strtucture Incomplete, Will Not Save\n";
+        //cout << "\nEphemeris Strtucture Incomplete, Will Not Save\n";
         break;
 
         case RAW_CNT:
-        cout << "\nRAW_CNT case reached in ParseLog().";
+        //cout << "\nRAW_CNT case reached in ParseLog().";
         break;
+
+        case RSP_RECCHAN:
+        RspRec_Chan_Info channel_info; 
+        payload_length=buffer_index_; 
+        // memcpy(&channel_info, data_buffer_, payload_length);
+        // if(channel_callback_)
+        //     channel_callback_(channel_info, read_timestamp_);
+        // break; 
+
         default:
         printHex( data_buffer_, buffer_index_);
 

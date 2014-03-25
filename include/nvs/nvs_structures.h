@@ -11,7 +11,7 @@ namespace nvs{
 /*
     limits to impose
 */
-#define MAX_NOUT_SIZE 3000  // Maximum size of a NovAtel log buffer (ALMANAC logs are big!)
+#define MAX_NOUT_SIZE 7000  // Maximum size of a NovAtel log buffer (ALMANAC logs are big!)
 #define MAXCHAN     50  // Maximum number of signal channels
 #define MAX_SAT     33  // maximum number of prns - max prn is 32 plus prn 0 is 33
 #define MAX_MSG_SIZE (50) // max for the single message buffer    

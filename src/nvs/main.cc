@@ -27,12 +27,12 @@ int main (int argc, char *argv[]) {
     //receiver->WaitForCommand();
 
 
-    // uint8_t pvt[4];
-    // pvt[0]=0X10;
-    // pvt[1]=0x0b;  
-    // pvt[2]=0x10;
-    // pvt[3]=0x03; 
-    // bool result2 = receiver->SendMessage(&pvt[0],4);
+    // uint8_t chan[4];
+    // chan[0]=0X10;
+    // chan[1]=0x17;  
+    // chan[2]=0x10;
+    // chan[3]=0x03; 
+    // bool result2 = receiver->SendMessage(&chan[0],4);
     // receiver->Reboot(0x00);
     
 
